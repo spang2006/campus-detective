@@ -1,470 +1,313 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>健康大富翁 - 決策互動版</title>
-<style>
-    body {
-        font-family: monospace;
-        background-color: #2c3e50;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-        color: #ecf0f1;
-    }
-    #game-container {
-        display: flex;
-        gap: 20px;
-        background: #34495e;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        position: relative;
-    }
-    #board {
-        display: grid;
-        grid-template-columns: repeat(4, 120px);
-        grid-template-rows: repeat(4, 120px);
-        gap: 5px;
-    }
-    /* 排列成環狀的 CSS Grid 技巧 */
-    .space[data-id="0"] { grid-area: 1 / 1; }
-    .space[data-id="1"] { grid-area: 1 / 2; }
-    .space[data-id="2"] { grid-area: 1 / 3; }
-    .space[data-id="3"] { grid-area: 1 / 4; }
-    .space[data-id="4"] { grid-area: 2 / 4; }
-    .space[data-id="5"] { grid-area: 3 / 4; }
-    .space[data-id="6"] { grid-area: 4 / 4; }
-    .space[data-id="7"] { grid-area: 4 / 3; }
-    .space[data-id="8"] { grid-area: 4 / 2; }
-    .space[data-id="9"] { grid-area: 4 / 1; }
-    .space[data-id="10"] { grid-area: 3 / 1; }
-    .space[data-id="11"] { grid-area: 2 / 1; }
-
-    /* 中央空地區域放置骰子與提示 */
-    #center-area {
-        grid-area: 2 / 2 / 4 / 4;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        background-color: rgba(0,0,0,0.2);
-        border-radius: 10px;
-    }
-
-    .space {
-        background-color: #ecf0f1;
-        color: #2c3e50;
-        border: 2px solid #95a5a6;
-        border-radius: 8px;
-        padding: 5px;
-        display: flex;
-        flex-direction: column;
-        font-size: 13px;
-        position: relative;
-        transition: transform 0.1s, background-color 0.2s;
-    }
-    .space.active-step {
-        background-color: #f1c40f;
-        transform: scale(1.05);
-        z-index: 10;
-    }
-    .space-title { font-weight: bold; margin-bottom: 5px; text-align: center; }
-    .space-details { font-size: 11px; text-align: center; color: #c0392b; }
-    
-    .players-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 3px;
-        margin-top: auto;
-        justify-content: center;
-    }
-    .token {
-        width: 20px; height: 20px;
-        border-radius: 50%; color: white;
-        font-size: 12px; line-height: 20px;
-        text-align: center; font-weight: bold;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-    }
-
-    #panel {
-        width: 300px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    .player-card {
-        background: #2c3e50; padding: 10px; border-radius: 8px;
-        border-left: 5px solid transparent;
-        transition: 0.3s;
-    }
-    .player-card.active { border-left-color: #2ecc71; background: #3b536b; }
-    .stats-bar { display: flex; justify-content: space-between; font-size: 12px; margin-top: 5px;}
-    
-    #log {
-        flex-grow: 1; background: #1a252f; padding: 10px;
-        font-size: 12px; overflow-y: auto; border-radius: 8px;
-        height: 150px; font-family: monospace; color: #1abc9c;
-    }
-
-    /* 互動視窗 (Modal) */
-    #modal-overlay {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.8); display: none;
-        justify-content: center; align-items: center; z-index: 100;
-        border-radius: 10px;
-    }
-    #modal-box {
-        background: #ecf0f1; color: #2c3e50; padding: 20px;
-        border-radius: 8px; width: 300px; text-align: center;
-    }
-    .btn {
-        background: #2980b9; color: white; border: none;
-        padding: 10px 15px; margin: 5px; border-radius: 5px;
-        cursor: pointer; font-weight: bold; font-family: monospace;
-    }
-    .btn:hover { background: #3498db; }
-    .btn:disabled { background: #7f8c8d; cursor: not-allowed; }
-
-    #dice-display {
-        font-size: 40px; font-weight: bold; background: white;
-        color: #2c3e50; width: 60px; height: 60px;
-        line-height: 60px; text-align: center; border-radius: 10px;
-        margin-bottom: 10px;
-    }
-    .anim-spin { animation: spin 0.1s infinite linear; }
-    @keyframes spin { 100% { transform: rotate(15deg) scale(1.1); } }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康知識 RPG</title>
+    <style>
+        body {
+            background-color: #222;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #game-container {
+            width: 800px;
+            height: 500px;
+            background-color: #333;
+            border: 4px solid #fff;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #status-bar {
+            padding: 10px;
+            background-color: #111;
+            border-bottom: 2px solid #fff;
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+        }
+        #scene {
+            flex-grow: 1;
+            position: relative;
+            background: linear-gradient(to bottom, #4a6984 0%, #4a6984 60%, #5c4033 60%, #5c4033 100%);
+        }
+        .entity {
+            position: absolute;
+            bottom: 20%;
+            font-size: 60px;
+            transition: left 0.5s linear;
+        }
+        #player {
+            left: 50px;
+            z-index: 10;
+        }
+        #monster {
+            right: -100px;
+            display: none;
+        }
+        #dialog-box {
+            height: 180px;
+            background-color: #000;
+            border-top: 2px solid #fff;
+            padding: 15px;
+            box-sizing: border-box;
+            display: none;
+            flex-direction: column;
+        }
+        #question-text {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            line-height: 1.4;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        button.option-btn {
+            background-color: #444;
+            color: #fff;
+            border: 1px solid #fff;
+            padding: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 16px;
+            text-align: left;
+        }
+        button.option-btn:hover {
+            background-color: #666;
+        }
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+        #overlay h1 {
+            font-size: 40px;
+            margin-bottom: 20px;
+        }
+        #action-btn {
+            padding: 10px 20px;
+            font-size: 20px;
+            background-color: #fff;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+        }
+        #action-btn:hover {
+            background-color: #ddd;
+        }
+    </style>
 </head>
 <body>
 
 <div id="game-container">
-    <div id="board">
-        <div id="center-area">
-            <div id="dice-display">-</div>
-            <button id="btn-roll" class="btn" disabled>等待回合</button>
-        </div>
+    <div id="status-bar">
+        <span id="hp-display">HP: ❤️❤️❤️</span>
+        <span id="progress-display">怪物: 0/3</span>
+    </div>
+    
+    <div id="scene">
+        <div id="player" class="entity">🧑‍⚕️</div>
+        <div id="monster" class="entity">🦠</div>
+    </div>
+    
+    <div id="dialog-box">
+        <p id="question-text">題目載入中...</p>
+        <div class="options-grid" id="options-container">
+            </div>
     </div>
 
-    <div id="panel">
-        <div id="player-list"></div>
-        <div id="log">系統分析：遊戲引擎初始化完成。<br></div>
-    </div>
-
-    <div id="modal-overlay">
-        <div id="modal-box">
-            <h3 id="modal-title">決策事件</h3>
-            <p id="modal-text">請選擇應對方案</p>
-            <div id="modal-buttons"></div>
-        </div>
+    <div id="overlay">
+        <h1 id="overlay-title">健康知識 RPG</h1>
+        <button id="action-btn">開始遊戲</button>
     </div>
 </div>
 
 <script>
-    // --- 系統資料定義 ---
-    const mapData = [
-        { id: 0, name: "起點", type: "start", info: "經過領 $200, 體力+50" },
-        { id: 1, name: "健身房", type: "property", price: 100, rent: 20, owner: null },
-        { id: 2, name: "健康抉擇", type: "decision", info: "面臨選擇" },
-        { id: 3, name: "有機超市", type: "property", price: 150, rent: 30, owner: null },
-        { id: 4, name: "過度勞累", type: "tax", cost: 50, energyCost: 30, info: "扣 $50, 體力-30" },
-        { id: 5, name: "睡眠中心", type: "property", price: 200, rent: 40, owner: null },
-        { id: 6, name: "健康抉擇", type: "decision", info: "面臨選擇" },
-        { id: 7, name: "連鎖藥局", type: "property", price: 100, rent: 20, owner: null },
-        { id: 8, name: "急診室", type: "jail", info: "強制休息一回合" },
-        { id: 9, name: "諮商所", type: "property", price: 150, rent: 30, owner: null },
-        { id: 10, name: "健康抉擇", type: "decision", info: "面臨選擇" },
-        { id: 11, name: "休閒農場", type: "property", price: 200, rent: 40, owner: null }
-    ];
+    // 系統參數設定
+    const maxHP = 3;
+    let currentHP = maxHP;
+    let currentMonsterIndex = 0;
+    let isAnimating = false;
 
-    const players = [
-        { id: 0, name: "玩家", isBot: false, money: 800, energy: 100, pos: 0, color: "#e74c3c", status: "normal" },
-        { id: 1, name: "電腦 A", isBot: true, money: 800, energy: 100, pos: 0, color: "#3498db", status: "normal" },
-        { id: 2, name: "電腦 B", isBot: true, money: 800, energy: 100, pos: 0, color: "#9b59b6", status: "normal" }
-    ];
-
-    // 決策事件庫 (提供二選一)
-    const decisionEvents = [
+    // 怪物與題目資料庫
+    const encounters = [
         {
-            text: "下班後感到疲勞，是否要花錢搭計程車回家？",
-            optA: { label: "搭計程車 (花費 $30, 體力+10)", money: -30, energy: 10 },
-            optB: { label: "走路回家 (體力-20)", money: 0, energy: -20 }
+            sprite: '🦠',
+            question: '關於正確的洗手方式，下列何者為非？',
+            options: ['使用肥皂與清水', '僅用清水沖洗3秒', '搓揉至少20秒', '確實擦乾雙手'],
+            correctIndex: 1
         },
         {
-            text: "同事邀請吃高熱量宵夜，是否拒絕？",
-            optA: { label: "拒絕聚餐 (體力+20, 扣除交際費 $10)", money: -10, energy: 20 },
-            optB: { label: "參加聚餐 (體力-30)", money: 0, energy: -30 }
+            sprite: '🦇',
+            question: '依據醫學建議，一般成年人每日理想的睡眠時間約為多少？',
+            options: ['4至5小時', '10至12小時', '7至9小時', '少於4小時'],
+            correctIndex: 2
         },
         {
-            text: "發現自費的全身健康檢查方案。",
-            optA: { label: "花費 $100 檢查 (體力補滿)", money: -100, energy: "max" },
-            optB: { label: "忽略 (無事發生)", money: 0, energy: 0 }
+            sprite: '🐉',
+            question: '預防登革熱最核心且有效的環境管理措施為？',
+            options: ['清除室內外積水容器', '大量噴灑化學殺蟲劑', '全天候緊閉門窗', '常規服用抗生素'],
+            correctIndex: 0
         }
     ];
 
-    let turnIndex = 0;
-    const elBoard = document.getElementById('board');
-    const elPlayerList = document.getElementById('player-list');
-    const elLog = document.getElementById('log');
-    const btnRoll = document.getElementById('btn-roll');
-    const elDice = document.getElementById('dice-display');
-    const elModal = document.getElementById('modal-overlay');
+    // DOM 元素選取
+    const hpDisplay = document.getElementById('hp-display');
+    const progressDisplay = document.getElementById('progress-display');
+    const playerEl = document.getElementById('player');
+    const monsterEl = document.getElementById('monster');
+    const dialogBox = document.getElementById('dialog-box');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const actionBtn = document.getElementById('action-btn');
 
-    // 系統延遲 Promise
-    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-    function log(msg) {
-        elLog.innerHTML += `> ${msg}<br>`;
-        elLog.scrollTop = elLog.scrollHeight;
+    // 初始化/重置遊戲狀態
+    function initGame() {
+        currentHP = maxHP;
+        currentMonsterIndex = 0;
+        updateStatus();
+        overlay.style.display = 'none';
+        playerEl.style.left = '50px';
+        spawnMonster();
     }
 
-    // --- 畫面渲染邏輯 ---
-    function initBoard() {
-        mapData.forEach((space) => {
-            const div = document.createElement('div');
-            div.className = 'space';
-            div.dataset.id = space.id;
-            div.innerHTML = `
-                <div class="space-title">${space.name}</div>
-                <div class="space-details">${space.type === 'property' ? '$'+space.price : space.info}</div>
-                <div class="players-container" id="cell-players-${space.id}"></div>
-            `;
-            elBoard.appendChild(div);
-        });
-        updateTokens();
+    // 更新狀態列
+    function updateStatus() {
+        hpDisplay.innerText = 'HP: ' + '❤️'.repeat(currentHP) + '🖤'.repeat(maxHP - currentHP);
+        progressDisplay.innerText = `怪物: ${currentMonsterIndex}/${encounters.length}`;
     }
 
-    function updateTokens() {
-        mapData.forEach(s => document.getElementById(`cell-players-${s.id}`).innerHTML = '');
-        players.forEach(p => {
-            const container = document.getElementById(`cell-players-${p.pos}`);
-            const token = document.createElement('div');
-            token.className = 'token';
-            token.style.backgroundColor = p.color;
-            token.innerText = p.id === 0 ? "我" : "C";
-            container.appendChild(token);
-        });
-        renderPlayers();
-    }
-
-    function renderPlayers() {
-        elPlayerList.innerHTML = '';
-        players.forEach((p, idx) => {
-            const div = document.createElement('div');
-            div.className = `player-card ${idx === turnIndex ? 'active' : ''}`;
-            div.innerHTML = `
-                <span style="color:${p.color}">■</span> <b>${p.name}</b> 
-                [${p.status === 'hospital' ? '住院中' : '正常'}]
-                <div class="stats-bar">
-                    <span>資金: $${p.money}</span>
-                    <span style="color:${p.energy < 30 ? '#e74c3c' : '#2ecc71'}">體力: ${p.energy}/100</span>
-                </div>
-            `;
-            elPlayerList.appendChild(div);
-        });
-    }
-
-    // --- 互動等待邏輯 ---
-    // 將按鈕點擊封裝為 Promise，中斷單線程的連續執行
-    function waitForHumanRoll() {
-        return new Promise(resolve => {
-            btnRoll.disabled = false;
-            btnRoll.innerText = "點擊擲骰";
-            btnRoll.onclick = () => {
-                btnRoll.disabled = true;
-                resolve();
-            };
-        });
-    }
-
-    function waitForDecision(eventObj) {
-        return new Promise(resolve => {
-            document.getElementById('modal-title').innerText = "遭遇抉擇";
-            document.getElementById('modal-text').innerText = eventObj.text;
-            const btnBox = document.getElementById('modal-buttons');
-            btnBox.innerHTML = '';
-
-            [eventObj.optA, eventObj.optB].forEach((opt, index) => {
-                const b = document.createElement('button');
-                b.className = 'btn';
-                b.innerText = opt.label;
-                b.onclick = () => {
-                    elModal.style.display = 'none';
-                    resolve(opt);
-                };
-                btnBox.appendChild(b);
-            });
-            elModal.style.display = 'flex';
-        });
-    }
-
-    function waitForBuyDecision(space) {
-        return new Promise(resolve => {
-            document.getElementById('modal-title').innerText = "購買資產";
-            document.getElementById('modal-text').innerText = `是否花費 $${space.price} 投資 ${space.name}？\n預期租金收益：$${space.rent}`;
-            const btnBox = document.getElementById('modal-buttons');
-            btnBox.innerHTML = `
-                <button class="btn" id="btn-buy-yes">購買</button>
-                <button class="btn" id="btn-buy-no">放棄</button>
-            `;
-            elModal.style.display = 'flex';
-            
-            document.getElementById('btn-buy-yes').onclick = () => { elModal.style.display = 'none'; resolve(true); };
-            document.getElementById('btn-buy-no').onclick = () => { elModal.style.display = 'none'; resolve(false); };
-        });
-    }
-
-    // --- 動畫與核心運算邏輯 ---
-    async function animateDice() {
-        elDice.classList.add('anim-spin');
-        for (let i = 0; i < 10; i++) {
-            elDice.innerText = Math.floor(Math.random() * 6) + 1;
-            await sleep(50);
+    // 觸發怪物生成與移動動畫
+    function spawnMonster() {
+        if (currentMonsterIndex >= encounters.length) {
+            endGame(true);
+            return;
         }
-        elDice.classList.remove('anim-spin');
-        const finalResult = Math.floor(Math.random() * 6) + 1;
-        elDice.innerText = finalResult;
-        return finalResult;
+
+        isAnimating = true;
+        dialogBox.style.display = 'none';
+        
+        const currentData = encounters[currentMonsterIndex];
+        monsterEl.innerText = currentData.sprite;
+        monsterEl.style.display = 'block';
+        monsterEl.style.right = '-100px';
+
+        // 模擬卷軸移動：怪物從右側進入畫面
+        setTimeout(() => {
+            monsterEl.style.right = '150px';
+        }, 100);
+
+        // 動畫結束後顯示問題
+        setTimeout(() => {
+            isAnimating = false;
+            showQuestion(currentData);
+        }, 600);
     }
 
-    async function moveSteps(player, steps) {
-        for (let i = 0; i < steps; i++) {
-            player.pos = (player.pos + 1) % mapData.length;
-            // 經過起點
-            if (player.pos === 0) {
-                player.money += 200;
-                player.energy = Math.min(100, player.energy + 50);
-                log(`[${player.name}] 經過起點，獲取津貼。`);
-            }
-            
-            player.energy -= 2; // 移動消耗體力
-            
-            // 視覺高亮當前格子
-            const currentCell = document.querySelector(`.space[data-id="${player.pos}"]`);
-            currentCell.classList.add('active-step');
-            updateTokens();
-            
-            await sleep(300);
-            currentCell.classList.remove('active-step');
-            
-            if (player.energy <= 0) break; // 體力不支中斷移動
-        }
+    // 顯示問題與選項
+    function showQuestion(data) {
+        dialogBox.style.display = 'flex';
+        questionText.innerText = data.question;
+        optionsContainer.innerHTML = '';
+
+        data.options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = `${String.fromCharCode(65 + index)}. ${opt}`;
+            btn.onclick = () => handleAnswer(index, data.correctIndex);
+            optionsContainer.appendChild(btn);
+        });
     }
 
-    function checkVitality(player) {
-        if (player.energy <= 0) {
-            log(`警告：[${player.name}] 體力透支！強制送往急診室。`);
-            player.pos = 8; // 送往急診室
-            player.money -= 100; // 醫療費
-            player.status = 'hospital';
-            player.energy = 50; // 恢復基礎體力
-            updateTokens();
-            return false;
-        }
-        return true;
-    }
-
-    // --- 遊戲主迴圈 (Async Engine) ---
-    async function gameLoop() {
-        while (true) {
-            const p = players[turnIndex];
-            renderPlayers();
-
-            if (p.status === 'hospital') {
-                log(`[${p.name}] 正在醫院休養，暫停行動。`);
-                p.status = 'normal';
-                await sleep(1000);
+    // 處理答案邏輯
+    function handleAnswer(selectedIndex, correctIndex) {
+        if (selectedIndex === correctIndex) {
+            // 答對邏輯
+            currentMonsterIndex++;
+            updateStatus();
+            dialogBox.style.display = 'none';
+            monsterDefeatedAnimation();
+        } else {
+            // 答錯邏輯
+            currentHP--;
+            updateStatus();
+            playerHitAnimation();
+            
+            if (currentHP <= 0) {
+                endGame(false);
             } else {
-                if (p.isBot) {
-                    btnRoll.innerText = "AI 運算中...";
-                    await sleep(800);
-                } else {
-                    await waitForHumanRoll();
-                }
-
-                const dice = await animateDice();
-                log(`[${p.name}] 擲出 ${dice} 點。`);
-                
-                await moveSteps(p, dice);
-                
-                // 確認體力狀態，若透支則中斷後續格子判定
-                if (checkVitality(p)) {
-                    const space = mapData[p.pos];
-                    log(`[${p.name}] 抵達：${space.name}`);
-                    await sleep(500);
-
-                    // 處理格子邏輯
-                    if (space.type === 'property') {
-                        if (space.owner === null) {
-                            if (p.isBot) {
-                                // AI 邏輯：資金大於價格+100 且體力尚可時購買
-                                if (p.money >= space.price + 100) {
-                                    p.money -= space.price;
-                                    space.owner = p.id;
-                                    document.querySelector(`.space[data-id="${space.id}"] .space-details`).innerText = `擁有者: ${p.name}`;
-                                    log(`[${p.name}] 投資了此設施。`);
-                                }
-                            } else {
-                                if (p.money >= space.price) {
-                                    const doBuy = await waitForBuyDecision(space);
-                                    if (doBuy) {
-                                        p.money -= space.price;
-                                        space.owner = p.id;
-                                        document.querySelector(`.space[data-id="${space.id}"] .space-details`).innerText = `擁有者: ${p.name}`;
-                                        log(`[${p.name}] 成功投資。`);
-                                    }
-                                } else {
-                                    log("資金不足，無法觸發購買選項。");
-                                }
-                            }
-                        } else if (space.owner !== p.id) {
-                            p.money -= space.rent;
-                            players[space.owner].money += space.rent;
-                            log(`[${p.name}] 支付使用費 $${space.rent}。`);
-                        }
-                    } 
-                    else if (space.type === 'decision') {
-                        const evt = decisionEvents[Math.floor(Math.random() * decisionEvents.length)];
-                        let choice;
-                        if (p.isBot) {
-                            // AI 隨機選擇
-                            choice = Math.random() > 0.5 ? evt.optA : evt.optB;
-                            log(`[${p.name}] 面臨抉擇，選擇了：${choice.label.split('(')[0]}`);
-                        } else {
-                            choice = await waitForDecision(evt);
-                            log(`[${p.name}] 決定：${choice.label}`);
-                        }
-                        
-                        p.money += choice.money;
-                        if (choice.energy === "max") p.energy = 100;
-                        else p.energy = Math.min(100, p.energy + choice.energy);
-                    }
-                    else if (space.type === 'tax') {
-                        p.money -= space.cost;
-                        p.energy -= space.energyCost;
-                    }
-                    else if (space.type === 'jail') {
-                        p.status = 'hospital';
-                        log(`[${p.name}] 進入急診室，下回合暫停。`);
-                    }
-                }
+                questionText.innerText = '答錯了！遭受攻擊扣除 1 HP。請再試一次。';
             }
-
-            checkVitality(p); // 結算後再次檢查
-            renderPlayers();
-            
-            // 換人邏輯
-            turnIndex = (turnIndex + 1) % players.length;
-            await sleep(500);
         }
     }
 
-    // 啟動系統
-    initBoard();
-    gameLoop();
+    // 擊敗怪物動畫
+    function monsterDefeatedAnimation() {
+        monsterEl.style.opacity = '0';
+        monsterEl.style.transform = 'scale(0.5)';
+        
+        setTimeout(() => {
+            monsterEl.style.display = 'none';
+            monsterEl.style.opacity = '1';
+            monsterEl.style.transform = 'scale(1)';
+            spawnMonster();
+        }, 500);
+    }
+
+    // 玩家受擊動畫
+    function playerHitAnimation() {
+        playerEl.style.transform = 'translateX(-20px)';
+        playerEl.style.color = 'red';
+        setTimeout(() => {
+            playerEl.style.transform = 'translateX(20px)';
+        }, 100);
+        setTimeout(() => {
+            playerEl.style.transform = 'translateX(0)';
+            playerEl.style.color = 'inherit';
+        }, 200);
+    }
+
+    // 結算遊戲結果
+    function endGame(isVictory) {
+        dialogBox.style.display = 'none';
+        overlay.style.display = 'flex';
+        
+        if (isVictory) {
+            overlayTitle.innerText = '探險成功！';
+            overlayTitle.style.color = '#4CAF50';
+            actionBtn.innerText = '重新開始';
+        } else {
+            overlayTitle.innerText = 'HP 歸零，探險失敗';
+            overlayTitle.style.color = '#F44336';
+            actionBtn.innerText = '重新挑戰';
+        }
+        
+        actionBtn.onclick = initGame;
+    }
+
+    // 綁定初始按鈕事件
+    actionBtn.onclick = initGame;
 
 </script>
 </body>
