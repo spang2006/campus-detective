@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>向量健康電子雞</title>
+<title>向量健康電子雞 - 進化版</title>
 <style>
-    /* --- 核心裝置樣式 --- */
     body {
         display: flex;
         justify-content: center;
@@ -16,15 +15,16 @@
         margin: 0;
     }
     #device {
-        background-color: #ffaa00; /* 經典橘黃色 */
+        background-color: #ffaa00;
         padding: 25px;
         border-radius: 40px 40px 50px 50px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.4), inset 0 5px 15px rgba(255,255,255,0.3);
         width: 320px;
         text-align: center;
+        position: relative;
     }
     #screen {
-        background-color: #9bbc0f; /* 經典遊戲男孩綠色螢幕 */
+        background-color: #9bbc0f;
         border: 5px solid #222;
         border-radius: 10px;
         height: 240px;
@@ -37,15 +37,22 @@
         color: #0f380f;
         box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
         cursor: pointer;
-        overflow: hidden; /* 確保內容不超出螢幕 */
+        overflow: hidden;
     }
     .stats {
         display: flex;
         justify-content: space-between;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: bold;
-        visibility: hidden; /* 孵化前隱藏 */
-        margin-bottom: 10px;
+        visibility: hidden; 
+        margin-bottom: 5px;
+        flex-wrap: wrap;
+    }
+    .stats-row {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2px;
     }
     #pet-container {
         flex-grow: 1;
@@ -55,20 +62,37 @@
         position: relative;
     }
     
-    /* --- SVG 雞的樣式與動畫 --- */
+    /* 進化特效圖層 */
+    #flash-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: white;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 10;
+    }
+    @keyframes flash {
+        0% { opacity: 0; }
+        50% { opacity: 1; }
+        100% { opacity: 0; }
+    }
+    .anim-flash { animation: flash 1s ease-in-out; }
+
+    /* SVG 基礎設定 */
     #pet-graphics {
         width: 100px;
         height: 100px;
-        display: none; /* 孵化後顯示 */
+        display: none; 
     }
 
-    /* 定義雞的部位 */
-    .chicken-body { fill: #fdd835; stroke: #222; stroke-width: 2; }
-    .chicken-head { fill: #fff176; stroke: #222; stroke-width: 2; }
+    /* 圖形部件色彩設定 */
+    .color-body-baby { fill: #fff59d; stroke: #222; stroke-width: 2; }
+    .color-body-teen { fill: #ffee58; stroke: #222; stroke-width: 2; }
+    .color-body-adult { fill: #fdd835; stroke: #222; stroke-width: 2; }
+    .color-head-adult { fill: #fff176; stroke: #222; stroke-width: 2; }
+    .color-beak { fill: #ff9800; stroke: #222; stroke-width: 1.5; }
+    .color-comb { fill: #e53935; stroke: #222; stroke-width: 2; }
     .chicken-eye { fill: #222; }
-    .chicken-beak { fill: #ff9800; stroke: #222; stroke-width: 1.5; }
-    .chicken-comb { fill: #e53935; stroke: #222; stroke-width: 2; }
-    .chicken-wing { fill: #fdd835; stroke: #222; stroke-width: 2; }
 
     /* 初始化狀態：蛋 */
     #pet-text {
@@ -77,182 +101,141 @@
         user-select: none;
     }
 
-    /* --- 動畫定義 (CSS) --- */
-    
-    /* 1. 蛋：受傷搖晃 (click) */
+    /* 動作動畫 */
     @keyframes egg-shake {
         0% { transform: translateX(0); }
         25% { transform: translateX(-10px) rotate(-15deg); }
         75% { transform: translateX(10px) rotate(15deg); }
         100% { transform: translateX(0); }
     }
-    
-    /* 2. 雞：一般跳躍 (idle) */
     @keyframes chicken-hop {
         0%, 100% { transform: translateY(0) scaleX(1); }
         50% { transform: translateY(-15px) scaleX(1); }
-        55% { transform: translateY(-15px) scaleX(1.1); } /* 落地前微微變形 */
+        55% { transform: translateY(-15px) scaleX(1.1); }
     }
-    
-    /* 3. 雞：眨眼 (idle loop) */
     @keyframes eye-blink {
         0%, 90%, 100% { opacity: 1; }
         95% { opacity: 0; }
     }
-    
-    /* 4. 雞：生病/傷心發抖 (sad) */
     @keyframes chicken-shiver {
         0% { transform: translate(1px, 1px) rotate(0deg); }
-        10% { transform: translate(-1px, -2px) rotate(-1deg); }
-        20% { transform: translate(-3px, 0px) rotate(1deg); }
-        30% { transform: translate(3px, 2px) rotate(0deg); }
-        40% { transform: translate(1px, -1px) rotate(1deg); }
-        50% { transform: translate(-1px, 2px) rotate(-1deg); }
-        60% { transform: translate(-3px, 1px) rotate(0deg); }
-        70% { transform: translate(3px, 1px) rotate(-1deg); }
+        20% { transform: translate(-2px, 0px) rotate(1deg); }
+        40% { transform: translate(2px, 1px) rotate(0deg); }
+        60% { transform: translate(-2px, 1px) rotate(0deg); }
         80% { transform: translate(-1px, -1px) rotate(1deg); }
-        90% { transform: translate(1px, 2px) rotate(0deg); }
-        100% { transform: translate(1px, -2px) rotate(-1deg); }
+        100% { transform: translate(1px, -1px) rotate(-1deg); }
     }
 
-    /* 動畫類別 */
     .anim-egg-shake { animation: egg-shake 0.3s ease-in-out; }
     .anim-chicken-hop { animation: chicken-hop 1.2s infinite ease-out; }
     .anim-chicken-shiver { animation: chicken-shiver 0.3s infinite linear; }
-    
-    /* 部位細節動畫 */
     .anim-eye-blink { animation: eye-blink 4s infinite; }
 
-    /* 不同狀態下的 SVG 變化 */
-    .sleeping {
-        transform: translateY(20px) rotate(10deg);
-    }
-    .sleeping .chicken-eye {
-        display: none; /* 隱藏張開的眼 */
-    }
-    .sleeping .chicken-wing {
-        display: none;
-    }
-    /* 在 SVG 中手動加入 zZ */
+    /* 睡眠與死亡通用文字/圖形 */
     .sleep-text {
-        fill: #222;
-        font-size: 20px;
-        font-family: sans-serif;
-        font-weight: bold;
-        opacity: 0;
-        animation: eye-blink 1.5s infinite;
+        fill: #222; font-size: 20px; font-weight: bold; font-family: sans-serif;
+        opacity: 0; animation: eye-blink 1.5s infinite;
     }
-    
-    .dead {
-        transform: translateY(30px) rotate(-90deg); /* 翻倒 */
-    }
-    .dead .chicken-eye {
-        display: none;
-    }
-    /* 加上 X 眼 */
     .dead-x-eye {
-        fill: none;
-        stroke: #222;
-        stroke-width: 3;
-        stroke-linecap: round;
-        display: none;
+        fill: none; stroke: #222; stroke-width: 3; stroke-linecap: round; display: none;
     }
-    
-    /* 狀態觸發的 CSS 規則 */
+
+    /* 根據屬性控制生命週期階段的顯示與隱藏 */
+    #stage-baby, #stage-teen, #stage-adult { display: none; }
+    #device[data-stage="baby"] #stage-baby { display: block; }
+    #device[data-stage="teen"] #stage-teen { display: block; }
+    #device[data-stage="adult"] #stage-adult { display: block; }
+
+    /* 特殊狀態觸發的 CSS 覆寫 (睡眠) */
     #device[data-state="sleeping"] #pet-graphics {
-        animation: none; /* 停止跳躍 */
-        transform: translateY(15px) rotate(10deg);
+        animation: none; transform: translateY(15px) rotate(10deg);
     }
-    #device[data-state="sleeping"] #pet-graphics .sleep-text { opacity: 1; }
-    #device[data-state="sleeping"] #pet-graphics .chicken-eye { display: none; }
-    #device[data-state="sleeping"] #pet-graphics .chicken-wing { visibility: hidden; }
+    #device[data-state="sleeping"] .sleep-text { opacity: 1; }
+    #device[data-state="sleeping"] .chicken-eye { display: none; }
+    #device[data-state="sleeping"] .hide-on-sleep { visibility: hidden; }
 
+    /* 特殊狀態觸發的 CSS 覆寫 (死亡) */
     #device[data-state="dead"] #pet-graphics {
-        animation: none;
-        transform: translateY(35px) scaleY(0.6) rotate(-90deg); /* 死亡翻倒 */
+        animation: none; transform: translateY(35px) scaleY(0.6) rotate(-90deg);
     }
-    #device[data-state="dead"] #pet-graphics .chicken-eye { display: none; }
-    #device[data-state="dead"] #pet-graphics .dead-x-eye { display: block; }
-    #device[data-state="dead"] #pet-graphics .chicken-comb { visibility: hidden; }
+    #device[data-state="dead"] .chicken-eye { display: none; }
+    #device[data-state="dead"] .dead-x-eye { display: block; }
+    #device[data-state="dead"] .hide-on-dead { visibility: hidden; }
 
-
-    /* --- 訊息框與按鈕樣式 --- */
+    /* 訊息與按鈕 */
     #message-box {
-        font-size: 13px;
-        min-height: 45px;
-        background: rgba(15, 56, 15, 0.1);
-        border-radius: 5px;
-        padding: 6px;
-        text-align: left;
-        line-height: 1.4;
-        font-weight: bold;
+        font-size: 13px; min-height: 45px; background: rgba(15, 56, 15, 0.1);
+        border-radius: 5px; padding: 6px; text-align: left; line-height: 1.4; font-weight: bold;
     }
-    .buttons {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-around;
-        gap: 10px;
-    }
+    .buttons { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 10px; }
     button {
-        background-color: #222;
-        color: white;
-        border: none;
-        padding: 10px;
-        border-radius: 50%;
-        width: 65px;
-        height: 65px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: bold;
-        box-shadow: 0 5px 0 #000;
-        transition: transform 0.1s, box-shadow 0.1s;
+        background-color: #222; color: white; border: none; padding: 10px;
+        border-radius: 50%; width: 65px; height: 65px; cursor: pointer;
+        font-size: 14px; font-weight: bold; box-shadow: 0 5px 0 #000;
     }
-    button:active {
-        transform: translateY(5px);
-        box-shadow: 0 0 0 #000;
-    }
-    button:disabled {
-        background-color: #666;
-        box-shadow: 0 5px 0 #333;
-        cursor: not-allowed;
-    }
+    button:active { transform: translateY(5px); box-shadow: 0 0 0 #000; }
+    button:disabled { background-color: #666; box-shadow: 0 5px 0 #333; cursor: not-allowed; }
 </style>
 </head>
 <body data-state="egg">
 
-<div id="device">
+<div id="device" data-stage="baby">
     <div id="screen" onclick="interactScreen()">
+        <div id="flash-overlay"></div>
+        
         <div class="stats" id="stats-bar">
-            <span>飽食:<span id="val-hunger">50</span></span>
-            <span>健康:<span id="val-health">80</span></span>
-            <span>心情:<span id="val-happiness">80</span></span>
+            <div class="stats-row">
+                <span>飽食:<span id="val-hunger">50</span></span>
+                <span>健康:<span id="val-health">80</span></span>
+            </div>
+            <div class="stats-row">
+                <span>心情:<span id="val-happiness">80</span></span>
+                <span>年齡:<span id="val-age">0</span></span>
+            </div>
         </div>
         
         <div id="pet-container">
             <div id="pet-text">🥚</div>
             
             <svg id="pet-graphics" viewBox="0 0 100 100">
-                <circle class="chicken-body" cx="50" cy="70" r="28" />
-                <circle class="chicken-head" cx="50" cy="45" r="18" />
-                
-                <path class="chicken-comb" d="M38,33 C38,15 45,15 50,27 C55,15 62,15 62,33 Z" />
-                
-                <path class="chicken-wing" d="M22,70 C15,65 15,75 22,80 Z" />
-                <path class="chicken-wing" d="M78,70 C85,65 85,75 78,80 Z" />
-                
-                <polygon class="chicken-beak" points="50,55 56,48 44,48" />
-                
-                <circle class="chicken-eye anim-eye-blink" cx="44" cy="42" r="2.5" />
-                <circle class="chicken-eye anim-eye-blink" cx="56" cy="42" r="2.5" />
+                <g id="stage-baby">
+                    <circle class="color-body-baby" cx="50" cy="70" r="16" />
+                    <polygon class="color-beak" points="50,65 55,60 45,60" />
+                    <circle class="chicken-eye anim-eye-blink" cx="46" cy="58" r="1.5" />
+                    <circle class="chicken-eye anim-eye-blink" cx="54" cy="58" r="1.5" />
+                    <path class="dead-x-eye" d="M44,56 L48,60 M48,56 L44,60" />
+                    <path class="dead-x-eye" d="M52,56 L56,60 M56,56 L52,60" />
+                </g>
+
+                <g id="stage-teen">
+                    <circle class="color-body-teen" cx="50" cy="65" r="22" />
+                    <path class="color-comb hide-on-dead" d="M45,43 C45,35 55,35 55,43 Z" />
+                    <path class="color-body-teen hide-on-sleep" d="M28,65 C23,60 23,70 28,73 Z" />
+                    <path class="color-body-teen hide-on-sleep" d="M72,65 C77,60 77,70 72,73 Z" />
+                    <polygon class="color-beak" points="50,56 56,49 44,49" />
+                    <circle class="chicken-eye anim-eye-blink" cx="45" cy="46" r="2" />
+                    <circle class="chicken-eye anim-eye-blink" cx="55" cy="46" r="2" />
+                    <path class="dead-x-eye" d="M42,43 L48,49 M48,43 L42,49" />
+                    <path class="dead-x-eye" d="M52,43 L58,49 M58,43 L52,49" />
+                </g>
+
+                <g id="stage-adult">
+                    <circle class="color-body-adult" cx="50" cy="70" r="28" />
+                    <circle class="color-head-adult" cx="50" cy="45" r="18" />
+                    <path class="color-comb hide-on-dead" d="M38,33 C38,15 45,15 50,27 C55,15 62,15 62,33 Z" />
+                    <path class="color-body-adult hide-on-sleep" d="M22,70 C15,65 15,75 22,80 Z" />
+                    <path class="color-body-adult hide-on-sleep" d="M78,70 C85,65 85,75 78,80 Z" />
+                    <polygon class="color-beak" points="50,55 56,48 44,48" />
+                    <circle class="chicken-eye anim-eye-blink" cx="44" cy="42" r="2.5" />
+                    <circle class="chicken-eye anim-eye-blink" cx="56" cy="42" r="2.5" />
+                    <path class="dead-x-eye" d="M41,39 L47,45 M47,39 L41,45" />
+                    <path class="dead-x-eye" d="M53,39 L59,45 M59,39 L53,45" />
+                </g>
                 
                 <text class="sleep-text anim-eye-blink" x="70" y="30">z</text>
                 <text class="sleep-text anim-eye-blink" x="80" y="20" style="animation-delay: 0.5s">Z</text>
-                
-                <path class="dead-x-eye" d="M41,39 L47,45 M47,39 L41,45" />
-                <path class="dead-x-eye" d="M53,39 L59,45 M59,39 L53,45" />
             </svg>
         </div>
-        
         <div id="message-box">系統：請點擊螢幕來孵化電子雞。</div>
     </div>
     
@@ -265,55 +248,36 @@
 </div>
 
 <script>
-    // 系統狀態
-    let appState = 'egg'; // egg, active, sleeping, dead
+    let appState = 'egg';
     let hatchProgress = 0;
     const CLICKS_TO_HATCH = 5;
     let gameLoop;
 
-    // 數值初始化
     let stats = {
-        hunger: 50,
-        health: 80,
-        happiness: 80
+        hunger: 50, health: 80, happiness: 80, age: 0
     };
+    let currentStage = 'baby';
 
-    // DOM 元素參考
     const elStatsBar = document.getElementById('stats-bar');
     const elHunger = document.getElementById('val-hunger');
     const elHealth = document.getElementById('val-health');
     const elHappiness = document.getElementById('val-happiness');
+    const elAge = document.getElementById('val-age');
     const elPetText = document.getElementById('pet-text');
     const elPetGraphics = document.getElementById('pet-graphics');
     const elMessage = document.getElementById('message-box');
     const elDevice = document.getElementById('device');
+    const elFlash = document.getElementById('flash-overlay');
     const buttons = document.querySelectorAll('button');
 
-    // 健康知識庫
     const knowledgeBase = {
-        feed: [
-            "健康知識：均衡攝取六大類食物，維持穩定的血糖波動。",
-            "健康知識：成年人每日建議攝取蔬菜量應達 3 份（約 1.5 碗）。"
-        ],
-        water: [
-            "健康知識：每日建議飲水量（毫升）為：體重（公斤）x 30。",
-            "健康知識：口渴是身體缺水的「落後指標」，應定時補充水分。"
-        ],
-        exercise: [
-            "健康知識：每週應至少進行 150 分鐘中等強度有氧運動。",
-            "健康知識：規律運動能釋放腦內啡，降低心血管疾病風險。"
-        ],
-        sleep: [
-            "健康知識：成年人每日建議睡眠時間為 7 至 9 小時。",
-            "健康知識：深度睡眠期是體內組織修復、記憶鞏固的關鍵階段。"
-        ],
-        idle: [
-            "健康提示：久坐超過一小時應起身活動，降低代謝症候群風險。",
-            "健康提示：長期壓力會影響皮質醇分泌，損害免疫力。"
-        ]
+        feed: ["健康知識：均衡攝取六大類食物，維持穩定的血糖波動。", "健康知識：成年人每日建議攝取蔬菜量應達 3 份。"],
+        water: ["健康知識：每日建議飲水量為：體重 x 30 毫升。", "健康知識：口渴是缺水的落後指標，應定時補充水分。"],
+        exercise: ["健康知識：每週應至少進行 150 分鐘中等強度有氧運動。", "健康知識：規律運動能釋放腦內啡，降低心血管疾病風險。"],
+        sleep: ["健康知識：成年人每日建議睡眠時間為 7 至 9 小時。", "健康知識：深度睡眠期是組織修復、記憶鞏固的關鍵階段。"],
+        idle: ["健康提示：久坐超過一小時應起身活動，降低代謝症候群風險。", "健康提示：長期壓力會影響皮質醇分泌，損害免疫力。"]
     };
 
-    // 行為參數權重
     const actionEffects = {
         feed: { hunger: 30, health: 5, happiness: 5 },
         water: { hunger: 5, health: 15, happiness: 5 },
@@ -321,19 +285,15 @@
         sleep: { hunger: -10, health: 25, happiness: 10 }
     };
 
-    // 觸發重新套用動畫的工具函數
     function triggerAnimation(el, animClass) {
         el.classList.remove(animClass); 
-        void el.offsetWidth; // 觸發重繪 (Reflow)
+        void el.offsetWidth;
         el.classList.add(animClass);
     }
 
-    // 螢幕點擊事件（處理孵化）
     window.interactScreen = function() {
         if (appState !== 'egg') return;
-
         hatchProgress++;
-        // 對「蛋」的文字進行搖晃
         triggerAnimation(elPetText, 'anim-egg-shake');
 
         if (hatchProgress >= CLICKS_TO_HATCH) {
@@ -343,71 +303,55 @@
         }
     };
 
-    // 孵化邏輯
     function hatch() {
         appState = 'active';
-        
-        // 切換顯示：隱藏蛋文字，顯示 SVG 雞
         elPetText.style.display = 'none';
         elPetGraphics.style.display = 'block';
-        elPetGraphics.classList.add('anim-chicken-hop'); // 開始預設跳躍動畫
-        
+        elPetGraphics.classList.add('anim-chicken-hop');
         elStatsBar.style.visibility = 'visible';
         buttons.forEach(btn => btn.disabled = false);
-        elMessage.innerText = "系統提示：向量雞已孵化，請開始照顧與管理數值。";
+        elMessage.innerText = "系統提示：雛鳥已孵化。時間流逝將使年齡增長並觸發進化。";
         
         updateStatsDisplay();
-        updateUI(); // 根據當前數值設定初始表情 (發抖與否)
-        
-        // 啟動背景扣除邏輯 (每 5 秒一次)
+        updateUI();
         gameLoop = setInterval(timeTick, 5000);
     }
 
-    // 執行互動按鈕
     window.action = function(type, event) {
-        event.stopPropagation(); // 避免點擊按鈕時觸發螢幕的 onClick
-        if (appState === 'dead' || appState === 'sleeping') return;
+        event.stopPropagation();
+        if (appState === 'dead' || appState === 'sleeping' || appState === 'evolving') return;
 
         const effect = actionEffects[type];
-        
-        // 數值更新（確保不低於 0，不高於 100）
         stats.hunger = Math.min(100, Math.max(0, stats.hunger + effect.hunger));
         stats.health = Math.min(100, Math.max(0, stats.health + effect.health));
         stats.happiness = Math.min(100, Math.max(0, stats.happiness + effect.happiness));
         
-        // 輸出對應健康知識
         const messages = knowledgeBase[type];
         elMessage.innerText = messages[Math.floor(Math.random() * messages.length)];
 
-        // 處理行為期間的狀態與動畫
         if (type === 'sleep') {
             appState = 'sleeping';
-            elDevice.setAttribute('data-state', 'sleeping'); // 觸發 SVG 內部 CSS 變化
+            elDevice.setAttribute('data-state', 'sleeping');
             buttons.forEach(btn => btn.disabled = true);
-            
-            // 模擬睡眠過程，3秒後醒來
             setTimeout(() => {
                 if (appState === 'dead') return;
                 appState = 'active';
                 elDevice.removeAttribute('data-state');
                 buttons.forEach(btn => btn.disabled = false);
-                updateUI(); // 醒來後根據數值恢復發抖與否
+                updateUI();
             }, 3000);
         } else if (type === 'exercise') {
-            // 運動時快速跳躍
             elPetGraphics.classList.remove('anim-chicken-hop');
-            void elPetGraphics.offsetWidth; // reflow
+            void elPetGraphics.offsetWidth;
             elPetGraphics.classList.add('anim-chicken-hop');
             elPetGraphics.style.animationDuration = '0.4s';
-            
             setTimeout(() => { 
                 if (appState === 'active') {
-                    elPetGraphics.style.animationDuration = '1.2s'; // 恢復正常速度
+                    elPetGraphics.style.animationDuration = '1.2s';
                     updateUI(); 
                 }
             }, 1500);
         } else {
-            // 飲食或喝水：一般跳躍一次
             elPetGraphics.classList.add('anim-chicken-hop');
             setTimeout(() => { if (appState === 'active') updateUI(); }, 1000);
         }
@@ -416,18 +360,14 @@
         checkVitalSigns();
     };
 
-    // 時間衰減邏輯
     function timeTick() {
-        if (appState === 'dead') {
-            clearInterval(gameLoop);
-            return;
-        }
+        if (appState === 'dead' || appState === 'evolving') return;
 
         stats.hunger = Math.max(0, stats.hunger - 2);
         stats.health = Math.max(0, stats.health - 1);
         stats.happiness = Math.max(0, stats.happiness - 2);
+        stats.age += 1;
 
-        // 閒置時隨機跳出健康提示
         if (Math.random() < 0.2 && appState === 'active') {
             const msgs = knowledgeBase['idle'];
             elMessage.innerText = msgs[Math.floor(Math.random() * msgs.length)];
@@ -435,26 +375,55 @@
 
         updateStatsDisplay();
         checkVitalSigns();
+        checkEvolution();
         if (appState === 'active') updateUI();
     }
 
-    // 更新數值顯示
+    function checkEvolution() {
+        if (stats.age >= 5 && currentStage === 'baby') {
+            triggerEvolution('teen', '亞成鳥');
+        } else if (stats.age >= 10 && currentStage === 'teen') {
+            triggerEvolution('adult', '成鳥');
+        }
+    }
+
+    function triggerEvolution(newStage, stageName) {
+        appState = 'evolving';
+        buttons.forEach(btn => btn.disabled = true);
+        elPetGraphics.classList.remove('anim-chicken-hop', 'anim-chicken-shiver');
+        
+        triggerAnimation(elFlash, 'anim-flash');
+        elMessage.innerText = `系統運算中：個體正在進化為 [ ${stageName} ] ...`;
+
+        setTimeout(() => {
+            currentStage = newStage;
+            elDevice.setAttribute('data-stage', currentStage);
+        }, 500); 
+
+        setTimeout(() => {
+            if (stats.health > 0 && stats.hunger > 0) {
+                appState = 'active';
+                buttons.forEach(btn => btn.disabled = false);
+                elMessage.innerText = `進化完成。已進入 ${stageName} 階段。`;
+                updateUI();
+            }
+        }, 1000);
+    }
+
     function updateStatsDisplay() {
         elHunger.innerText = stats.hunger;
         elHealth.innerText = stats.health;
         elHappiness.innerText = stats.happiness;
+        elAge.innerText = stats.age;
     }
 
-    // 依據數值更新 UI 狀態（發抖/跳躍）
     function updateUI() {
         if (appState !== 'active') return;
 
-        // 當任一數值過低時，切換為發抖動畫
         if (stats.health < 30 || stats.hunger < 30 || stats.happiness < 30) {
             elPetGraphics.classList.remove('anim-chicken-hop');
             elPetGraphics.classList.add('anim-chicken-shiver');
         } else {
-            // 數值健康時，恢復一般跳躍
             elPetGraphics.classList.remove('anim-chicken-shiver');
             if (!elPetGraphics.classList.contains('anim-chicken-hop')) {
                 elPetGraphics.classList.add('anim-chicken-hop');
@@ -462,18 +431,15 @@
         }
     }
 
-    // 檢查死亡條件
     function checkVitalSigns() {
         if (stats.health <= 0 || stats.hunger <= 0) {
             appState = 'dead';
-            elDevice.setAttribute('data-state', 'dead'); // 觸發死亡翻倒 CSS
-            
-            elMessage.innerText = "系統警告：生命徵象消失（健康或飽食歸零），數值已凍結。請重新整理頁面。";
+            elDevice.setAttribute('data-state', 'dead');
+            elMessage.innerText = "系統警告：生命徵象低於閾值，判定死亡。流程終止。";
             buttons.forEach(btn => btn.disabled = true);
             clearInterval(gameLoop);
         }
     }
-
 </script>
 </body>
 </html>
