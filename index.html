@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>健康知識 RPG - 完整版</title>
+    <title>健康知識 RPG - 拯救村莊篇</title>
     <style>
         body {
             background-color: #222;
@@ -25,19 +25,26 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
         #status-bar {
             padding: 10px;
             background-color: #111;
             border-bottom: 2px solid #fff;
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
-            font-size: 20px;
+            font-size: 16px;
             z-index: 30;
         }
         .status-group {
             display: flex;
             gap: 15px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .status-group:last-child {
+            margin-bottom: 0;
         }
         #scene {
             flex-grow: 1;
@@ -72,9 +79,21 @@
             display: none;
             z-index: 5;
         }
+        #boss-hp-bar {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 5px;
+            border-radius: 5px;
+            display: none;
+            white-space: nowrap;
+        }
         #ui-layer {
             position: absolute;
-            top: 50px;
+            top: 70px;
             width: 100%;
             text-align: center;
             pointer-events: none;
@@ -132,10 +151,18 @@
             justify-content: center;
             align-items: center;
             z-index: 50;
+            text-align: center;
         }
         #overlay h1 {
             font-size: 40px;
             margin-bottom: 20px;
+            line-height: 1.2;
+        }
+        #overlay p {
+            font-size: 18px;
+            max-width: 80%;
+            margin-bottom: 30px;
+            line-height: 1.5;
         }
         #start-btn {
             padding: 10px 20px;
@@ -150,6 +177,15 @@
         #start-btn:hover {
             background-color: #ddd;
         }
+        /* 升級特效 */
+        .level-up-anim {
+            animation: levelUpFlash 1s ease-in-out;
+        }
+        @keyframes levelUpFlash {
+            0% { color: #fff; }
+            50% { color: #FFD700; text-shadow: 0 0 10px #FFD700; transform: scale(1.1); }
+            100% { color: #fff; }
+        }
     </style>
 </head>
 <body>
@@ -157,17 +193,22 @@
 <div id="game-container">
     <div id="status-bar">
         <div class="status-group">
+            <span id="player-info">🧑‍⚕️ 職業: 見習醫護 | 等級: Lv.1</span>
             <span id="hp-display">HP: ❤️❤️❤️</span>
-            <span id="equip-display">裝備: 無</span>
         </div>
-        <span id="progress-display">進度: 0%</span>
+        <div class="status-group">
+            <span id="equip-display">護甲: 無 | 武器: 聽診器</span>
+            <span id="progress-display">距離 BOSS: 遙遠</span>
+        </div>
     </div>
     
     <div id="scene">
         <div id="ground"></div>
         <div id="ui-layer">請使用鍵盤 [←] [→] 移動</div>
         <div id="player" class="entity">🧑‍⚕️</div>
-        <div id="encounter-entity" class="entity"></div>
+        <div id="encounter-entity" class="entity">
+            <div id="boss-hp-bar">😈😈😈</div>
+        </div>
     </div>
     
     <div id="dialog-box">
@@ -177,62 +218,107 @@
 
     <div id="overlay">
         <h1 id="overlay-title">健康知識 RPG</h1>
-        <button id="start-btn">開始遊戲</button>
+        <p id="overlay-desc">學習知識，升級打怪，拯救村莊！</p>
+        <button id="start-btn">開始冒險</button>
     </div>
 </div>
 
 <script>
-    // 遊戲核心參數
+    // 玩家狀態核心參數
     const maxHP = 3;
     let currentHP = maxHP;
-    let hasShield = false; // 護盾狀態
-    let currentEventIndex = 0;
+    let hasShield = false;
+    let playerLevel = 1;
+    let playerSprite = '🧑‍⚕️';
+    let playerClass = '見習醫護';
+    let playerWeapon = '聽診器';
     
-    // 物理與位移參數
-    let gameState = 'title'; // 'title', 'explore', 'dialogue', 'combat', 'gameover'
+    // 遊戲控制參數
+    let currentEventIndex = 0;
+    let gameState = 'title'; // 'explore', 'dialogue', 'combat', 'boss', 'gameover'
     let playerX = 50;
     let mapScrollX = 0;
     let speed = 5;
     let distanceToNextEvent = 300;
     
+    // BOSS 戰專屬變數
+    let currentBossHP = 0;
+    let currentBossQuestionIndex = 0;
+
     const keys = { ArrowLeft: false, ArrowRight: false };
 
-    // 事件資料庫 (整合 NPC 與 怪物)
+    // 事件資料庫 (加入升級怪物、BOSS與寶箱)
     const mapEvents = [
         {
             type: 'npc',
             sprite: '🧙‍♂️',
-            text: '村長：「年輕的醫護人員，前方的病毒非常危險。戴上這個『醫療級口罩』吧，它能為你抵擋一次致命錯誤。」',
-            itemLabel: '獲得裝備：醫療級口罩 (抵擋一次傷害)',
+            text: '村長：「前方的病毒群非常危險。戴上這個『醫療級口罩』，它能為你抵擋一次致命錯誤。」',
+            itemLabel: '獲得裝備：醫療級口罩 (護盾+1)',
             effect: 'shield'
         },
         {
-            type: 'monster',
-            sprite: '🦠',
-            question: '【遭遇 腸病毒】關於正確的洗手方式，下列何者為非？',
+            type: 'monster', sprite: '🦠',
+            question: '【Lv.1 腸病毒】關於正確的洗手方式，下列何者為非？',
             options: ['使用肥皂與清水', '僅用清水沖洗3秒', '搓揉至少20秒', '確實擦乾雙手'],
             correctIndex: 1
         },
         {
-            type: 'npc',
-            sprite: '👩‍🌾',
-            text: '村民：「謝謝你擊退病毒！這顆『營養蘋果』請收下，可以恢復你的體力。」',
-            itemLabel: '獲得道具：營養蘋果 (恢復 1 HP)',
-            effect: 'heal'
-        },
-        {
-            type: 'monster',
-            sprite: '🦇',
-            question: '【遭遇 疲勞蝙蝠】依據醫學建議，一般成年人每日理想的睡眠時間約為多少？',
+            type: 'monster', sprite: '🦇',
+            question: '【Lv.2 疲勞蝙蝠】依據醫學建議，一般成年人每日理想的睡眠時間約為多少？',
             options: ['4至5小時', '10至12小時', '7至9小時', '少於4小時'],
             correctIndex: 2
         },
         {
-            type: 'monster',
-            sprite: '🦟',
-            question: '【遭遇 登革熱蚊】預防登革熱最核心且有效的環境管理措施為？',
+            type: 'npc',
+            sprite: '👩‍🌾',
+            text: '村民：「謝謝你保護我們！這顆『營養蘋果』請收下，可以恢復你的體力。」',
+            itemLabel: '獲得道具：營養蘋果 (恢復 1 HP)',
+            effect: 'heal'
+        },
+        {
+            type: 'monster', sprite: '🦟',
+            question: '【Lv.3 登革熱蚊】預防登革熱最核心且有效的環境管理措施為？',
             options: ['清除室內外積水容器', '大量噴灑化學殺蟲劑', '全天候緊閉門窗', '常規服用抗生素'],
             correctIndex: 0
+        },
+        {
+            type: 'monster', sprite: '🍔',
+            question: '【Lv.4 垃圾食物怪】下列哪一種營養素是人體主要的能量來源？',
+            options: ['維生素', '礦物質', '碳水化合物', '水'],
+            correctIndex: 2
+        },
+        {
+            type: 'boss', sprite: '👿', maxHP: 3,
+            name: '【Lv.5 病毒母體】',
+            questions: [
+                {
+                    q: '【BOSS 戰 1/3】抗生素主要用於治療哪種病原體引起的感染？',
+                    opts: ['病毒', '細菌', '真菌', '寄生蟲'],
+                    ans: 1
+                },
+                {
+                    q: '【BOSS 戰 2/3】施打疫苗的主要目的是什麼？',
+                    opts: ['直接殺死體內病毒', '代替抗生素', '引發免疫反應產生抗體', '增加紅血球數量'],
+                    ans: 2
+                },
+                {
+                    q: '【BOSS 戰 3/3】世界衛生組織(WHO)建議成年人每週應進行至少多少分鐘的中等強度有氧運動？',
+                    opts: ['30分鐘', '75分鐘', '150分鐘', '300分鐘'],
+                    ans: 2
+                }
+            ]
+        },
+        {
+            type: 'treasure', sprite: '🎁',
+            text: '【獲得史詩級大寶箱！】裡面散發著耀眼的光芒...',
+            itemLabel: '打開寶箱 (獲得轉職券與專屬武器)',
+            effect: 'class_change'
+        },
+        {
+            type: 'story', sprite: '🏰',
+            text: '遠方傳來求救聲... 村莊正受到未知變種病毒的猛烈攻擊！你握緊手中的新武器，準備踏上新的征途。',
+            itemLabel: '解鎖：拯救村莊故事線',
+            effect: 'next_chapter'
         }
     ];
 
@@ -240,15 +326,18 @@
     const hpDisplay = document.getElementById('hp-display');
     const equipDisplay = document.getElementById('equip-display');
     const progressDisplay = document.getElementById('progress-display');
+    const playerInfo = document.getElementById('player-info');
     const sceneEl = document.getElementById('scene');
     const groundEl = document.getElementById('ground');
     const playerEl = document.getElementById('player');
     const encounterEl = document.getElementById('encounter-entity');
+    const bossHpBar = document.getElementById('boss-hp-bar');
     const dialogBox = document.getElementById('dialog-box');
     const dialogText = document.getElementById('dialog-text');
     const optionsContainer = document.getElementById('options-container');
     const overlay = document.getElementById('overlay');
     const overlayTitle = document.getElementById('overlay-title');
+    const overlayDesc = document.getElementById('overlay-desc');
     const startBtn = document.getElementById('start-btn');
 
     // 監聽鍵盤事件
@@ -262,6 +351,12 @@
     function initGame() {
         currentHP = maxHP;
         hasShield = false;
+        playerLevel = 1;
+        playerSprite = '🧑‍⚕️';
+        playerClass = '見習醫護';
+        playerWeapon = '聽診器';
+        playerEl.innerText = playerSprite;
+        
         currentEventIndex = 0;
         playerX = 50;
         mapScrollX = 0;
@@ -272,6 +367,7 @@
         overlay.style.display = 'none';
         dialogBox.style.display = 'none';
         encounterEl.style.display = 'none';
+        bossHpBar.style.display = 'none';
         
         keys.ArrowLeft = false;
         keys.ArrowRight = false;
@@ -281,10 +377,14 @@
 
     function updateStatus() {
         hpDisplay.innerText = 'HP: ' + '❤️'.repeat(currentHP) + '🖤'.repeat(maxHP - currentHP);
-        equipDisplay.innerText = hasShield ? '裝備: 🛡️口罩' : '裝備: 無';
+        equipDisplay.innerText = `護甲: ${hasShield ? '🛡️口罩' : '無'} | 武器: ⚔️${playerWeapon}`;
+        playerInfo.innerText = `${playerSprite} 職業: ${playerClass} | 等級: Lv.${playerLevel}`;
         
-        const progress = Math.floor((currentEventIndex / mapEvents.length) * 100);
-        progressDisplay.innerText = `進度: ${progress}%`;
+        if (playerLevel < 5) {
+            progressDisplay.innerText = `距離 BOSS: ${5 - playerLevel} 等`;
+        } else {
+            progressDisplay.innerText = `狀態: 終極挑戰`;
+        }
     }
 
     function gameLoop() {
@@ -330,8 +430,6 @@
     function checkEvent() {
         if (distanceToNextEvent <= 0 && currentEventIndex < mapEvents.length) {
             triggerEvent();
-        } else if (currentEventIndex >= mapEvents.length) {
-            endGame(true);
         }
     }
 
@@ -341,6 +439,14 @@
         encounterEl.style.display = 'block';
         encounterEl.style.opacity = '1';
         
+        // 重置 BOSS 血條顯示
+        if (currentData.type === 'boss') {
+            bossHpBar.style.display = 'block';
+            encounterEl.appendChild(bossHpBar); // 確保血條在怪物身上
+        } else {
+            bossHpBar.style.display = 'none';
+        }
+        
         keys.ArrowLeft = false;
         keys.ArrowRight = false;
 
@@ -348,15 +454,15 @@
             dialogBox.style.display = 'flex';
             optionsContainer.innerHTML = '';
 
-            if (currentData.type === 'npc') {
+            if (currentData.type === 'npc' || currentData.type === 'treasure' || currentData.type === 'story') {
                 gameState = 'dialogue';
                 dialogText.innerText = currentData.text;
                 
                 const btn = document.createElement('button');
                 btn.className = 'action-btn';
                 btn.innerText = currentData.itemLabel;
-                btn.style.gridColumn = '1 / -1'; // 讓按鈕佔據整列
-                btn.onclick = () => applyItemEffect(currentData.effect);
+                btn.style.gridColumn = '1 / -1';
+                btn.onclick = () => applySpecialEffect(currentData.effect);
                 optionsContainer.appendChild(btn);
 
             } else if (currentData.type === 'monster') {
@@ -367,50 +473,132 @@
                     const btn = document.createElement('button');
                     btn.className = 'action-btn option-btn';
                     btn.innerText = `${String.fromCharCode(65 + index)}. ${opt}`;
-                    btn.onclick = () => handleAnswer(index, currentData.correctIndex);
+                    btn.onclick = () => handleMonsterAnswer(index, currentData.correctIndex);
                     optionsContainer.appendChild(btn);
                 });
+            } else if (currentData.type === 'boss') {
+                gameState = 'boss';
+                currentBossHP = currentData.maxHP;
+                currentBossQuestionIndex = 0;
+                updateBossHPVisual();
+                renderBossQuestion(currentData);
             }
         }, 300);
     }
 
-    // 處理 NPC 道具效果
-    function applyItemEffect(effect) {
+    // 處理非戰鬥事件的效果
+    function applySpecialEffect(effect) {
         if (effect === 'shield') {
             hasShield = true;
+            resolveEvent();
         } else if (effect === 'heal') {
             if (currentHP < maxHP) currentHP++;
+            resolveEvent();
+        } else if (effect === 'class_change') {
+            playerClass = '高階防疫騎士';
+            playerSprite = '🦸‍♂️';
+            playerWeapon = '聖光針筒';
+            playerEl.innerText = playerSprite;
+            
+            playerInfo.classList.remove('level-up-anim');
+            void playerInfo.offsetWidth; // 觸發重繪
+            playerInfo.classList.add('level-up-anim');
+            
+            resolveEvent();
+        } else if (effect === 'next_chapter') {
+            endGame(true, '【第一章 完】\n敬請期待後續：拯救村莊篇！');
         }
-        
         updateStatus();
-        resolveEvent();
     }
 
-    // 處理怪物答題邏輯
-    function handleAnswer(selectedIndex, correctIndex) {
+    // 處理一般怪物戰鬥
+    function handleMonsterAnswer(selectedIndex, correctIndex) {
         if (selectedIndex === correctIndex) {
+            levelUp();
             resolveEvent();
         } else {
-            // 答錯邏輯
-            if (hasShield) {
-                hasShield = false;
-                dialogText.innerText = '答錯了！但你的「醫療級口罩」抵擋了這次傷害，裝備已損毀。請再試一次。';
-                updateStatus();
+            takeDamage();
+        }
+    }
+
+    // BOSS 戰問題渲染
+    function renderBossQuestion(bossData) {
+        const qData = bossData.questions[currentBossQuestionIndex];
+        dialogText.innerText = qData.q;
+        optionsContainer.innerHTML = '';
+        
+        qData.opts.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'action-btn option-btn';
+            btn.innerText = `${String.fromCharCode(65 + index)}. ${opt}`;
+            btn.onclick = () => handleBossAnswer(index, qData.ans, bossData);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    // 處理 BOSS 戰鬥邏輯
+    function handleBossAnswer(selectedIndex, correctIndex, bossData) {
+        if (selectedIndex === correctIndex) {
+            currentBossHP--;
+            updateBossHPVisual();
+            
+            // BOSS 受擊動畫
+            encounterEl.style.transform = 'scale(0.8)';
+            encounterEl.style.color = 'red';
+            setTimeout(() => {
+                encounterEl.style.transform = 'scale(1)';
+                encounterEl.style.color = 'inherit';
+            }, 200);
+
+            if (currentBossHP <= 0) {
+                bossHpBar.style.display = 'none';
+                levelUp();
+                resolveEvent();
             } else {
-                currentHP--;
-                updateStatus();
-                playerHitAnimation();
-                
-                if (currentHP <= 0) {
-                    endGame(false);
-                } else {
-                    dialogText.innerText = '答錯了！遭受攻擊扣除 1 HP。請再試一次。';
-                }
+                currentBossQuestionIndex++;
+                renderBossQuestion(bossData);
+            }
+        } else {
+            takeDamage();
+            if (currentHP > 0) {
+                dialogText.innerText = '被 BOSS 猛烈攻擊！扣除 1 HP。請重試這題。';
+                // 重新渲染同一題
+                setTimeout(() => renderBossQuestion(bossData), 1500);
             }
         }
     }
 
-    // 事件完成（擊敗怪物或領取道具）的共同收尾邏輯
+    function updateBossHPVisual() {
+        bossHpBar.innerText = '😈'.repeat(currentBossHP);
+    }
+
+    function levelUp() {
+        playerLevel++;
+        playerInfo.classList.remove('level-up-anim');
+        void playerInfo.offsetWidth; 
+        playerInfo.classList.add('level-up-anim');
+        updateStatus();
+    }
+
+    function takeDamage() {
+        if (hasShield) {
+            hasShield = false;
+            dialogText.innerText = '答錯了！但「醫療級口罩」抵擋了傷害，裝備損毀。請再試一次。';
+            updateStatus();
+            playerHitAnimation(false);
+        } else {
+            currentHP--;
+            updateStatus();
+            playerHitAnimation(true);
+            
+            if (currentHP <= 0) {
+                endGame(false, 'HP 歸零，旅程到此為止...');
+            } else {
+                dialogText.innerText = '答錯了！遭受攻擊扣除 1 HP。請再試一次。';
+            }
+        }
+    }
+
     function resolveEvent() {
         currentEventIndex++;
         updateStatus();
@@ -427,27 +615,29 @@
         }, 500);
     }
 
-    function playerHitAnimation() {
+    function playerHitAnimation(isHpLost) {
         playerEl.style.transform = `${playerEl.style.transform.includes('-1') ? 'scaleX(-1)' : 'scaleX(1)'} translateX(-20px)`;
-        playerEl.style.color = 'red';
+        if(isHpLost) playerEl.style.color = 'red';
+        
         setTimeout(() => {
             playerEl.style.transform = playerEl.style.transform.replace(' translateX(-20px)', '');
             playerEl.style.color = 'inherit';
         }, 200);
     }
 
-    function endGame(isVictory) {
+    function endGame(isVictory, message) {
         gameState = 'gameover';
         dialogBox.style.display = 'none';
         overlay.style.display = 'flex';
-        updateStatus();
+        
+        overlayDesc.innerText = message;
         
         if (isVictory) {
-            overlayTitle.innerText = '探險成功，抵達終點！';
-            overlayTitle.style.color = '#4CAF50';
-            startBtn.innerText = '重新開始';
+            overlayTitle.innerText = '🎉 冒險成功！';
+            overlayTitle.style.color = '#FFD700';
+            startBtn.innerText = '重新體驗';
         } else {
-            overlayTitle.innerText = 'HP 歸零，探險失敗';
+            overlayTitle.innerText = '☠️ 探險失敗';
             overlayTitle.style.color = '#F44336';
             startBtn.innerText = '重新挑戰';
         }
