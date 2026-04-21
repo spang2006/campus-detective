@@ -14,6 +14,7 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden; /* 防止視窗出現捲軸 */
         }
         #game-container {
             width: 800px;
@@ -32,34 +33,64 @@
             display: flex;
             justify-content: space-between;
             font-size: 20px;
+            z-index: 30;
         }
         #scene {
             flex-grow: 1;
             position: relative;
-            background: linear-gradient(to bottom, #4a6984 0%, #4a6984 60%, #5c4033 60%, #5c4033 100%);
+            /* 天空背景：利用重複的放射漸層模擬雲朵 */
+            background-color: #4a6984;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.2) 20px, transparent 21px),
+                radial-gradient(circle at 70% 40%, rgba(255,255,255,0.15) 30px, transparent 31px);
+            background-size: 300px 100%;
+        }
+        #ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 25%;
+            /* 地面背景：利用重複線性漸層製造移動參考線 */
+            background-image: repeating-linear-gradient(90deg, #5c4033, #5c4033 40px, #4a3329 40px, #4a3329 80px);
+            border-top: 4px solid #3b2818;
         }
         .entity {
             position: absolute;
-            bottom: 20%;
+            bottom: 25%;
             font-size: 60px;
-            transition: left 0.5s linear;
+            user-select: none;
         }
         #player {
             left: 50px;
             z-index: 10;
+            transition: transform 0.1s; /* 用於轉向 */
         }
         #monster {
-            right: -100px;
+            right: 150px;
             display: none;
+            z-index: 5;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 50px; /* 避開狀態列 */
+            width: 100%;
+            text-align: center;
+            pointer-events: none;
+            font-weight: bold;
+            color: rgba(255,255,255,0.7);
         }
         #dialog-box {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
             height: 180px;
-            background-color: #000;
+            background-color: rgba(0, 0, 0, 0.9);
             border-top: 2px solid #fff;
             padding: 15px;
             box-sizing: border-box;
             display: none;
             flex-direction: column;
+            z-index: 40;
         }
         #question-text {
             margin: 0 0 15px 0;
@@ -90,12 +121,12 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.85);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 20;
+            z-index: 50;
         }
         #overlay h1 {
             font-size: 40px;
@@ -125,14 +156,15 @@
     </div>
     
     <div id="scene">
+        <div id="ground"></div>
+        <div id="ui-layer" id="instruction">請使用鍵盤 [←] [→] 移動</div>
         <div id="player" class="entity">🧑‍⚕️</div>
         <div id="monster" class="entity">🦠</div>
     </div>
     
     <div id="dialog-box">
         <p id="question-text">題目載入中...</p>
-        <div class="options-grid" id="options-container">
-            </div>
+        <div class="options-grid" id="options-container"></div>
     </div>
 
     <div id="overlay">
@@ -142,11 +174,20 @@
 </div>
 
 <script>
-    // 系統參數設定
+    // 遊戲參數
     const maxHP = 3;
     let currentHP = maxHP;
     let currentMonsterIndex = 0;
-    let isAnimating = false;
+    
+    // 物理與位移參數
+    let gameState = 'title'; // 'title', 'explore', 'combat', 'gameover'
+    let playerX = 50;
+    let mapScrollX = 0;
+    let speed = 5;
+    let distanceToNextEncounter = 400; // 距離下次遭遇怪物的距離
+    
+    // 鍵盤狀態
+    const keys = { ArrowLeft: false, ArrowRight: false };
 
     // 怪物與題目資料庫
     const encounters = [
@@ -173,6 +214,8 @@
     // DOM 元素選取
     const hpDisplay = document.getElementById('hp-display');
     const progressDisplay = document.getElementById('progress-display');
+    const sceneEl = document.getElementById('scene');
+    const groundEl = document.getElementById('ground');
     const playerEl = document.getElementById('player');
     const monsterEl = document.getElementById('monster');
     const dialogBox = document.getElementById('dialog-box');
@@ -182,78 +225,155 @@
     const overlayTitle = document.getElementById('overlay-title');
     const actionBtn = document.getElementById('action-btn');
 
-    // 初始化/重置遊戲狀態
+    // 監聽鍵盤事件
+    window.addEventListener('keydown', (e) => {
+        if (keys.hasOwnProperty(e.code)) keys[e.code] = true;
+    });
+    window.addEventListener('keyup', (e) => {
+        if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
+    });
+
+    // 初始化/重置遊戲
     function initGame() {
         currentHP = maxHP;
         currentMonsterIndex = 0;
+        playerX = 50;
+        mapScrollX = 0;
+        distanceToNextEncounter = 400;
+        gameState = 'explore';
+        
         updateStatus();
         overlay.style.display = 'none';
-        playerEl.style.left = '50px';
-        spawnMonster();
+        dialogBox.style.display = 'none';
+        monsterEl.style.display = 'none';
+        
+        // 重置按鍵狀態以防卡鍵
+        keys.ArrowLeft = false;
+        keys.ArrowRight = false;
+        
+        requestAnimationFrame(gameLoop);
     }
 
-    // 更新狀態列
     function updateStatus() {
         hpDisplay.innerText = 'HP: ' + '❤️'.repeat(currentHP) + '🖤'.repeat(maxHP - currentHP);
         progressDisplay.innerText = `怪物: ${currentMonsterIndex}/${encounters.length}`;
     }
 
-    // 觸發怪物生成與移動動畫
-    function spawnMonster() {
-        if (currentMonsterIndex >= encounters.length) {
-            endGame(true);
-            return;
+    // 主遊戲迴圈
+    function gameLoop() {
+        if (gameState === 'explore') {
+            handleMovement();
+            updateVisuals();
+            checkEncounter();
         }
+        
+        if (gameState !== 'gameover' && gameState !== 'title') {
+            requestAnimationFrame(gameLoop);
+        }
+    }
 
-        isAnimating = true;
-        dialogBox.style.display = 'none';
+    // 處理移動邏輯
+    function handleMovement() {
+        if (keys.ArrowRight) {
+            playerEl.style.transform = 'scaleX(1)'; // 面向右
+            // 若玩家還沒到畫面中間，則移動玩家；否則捲動背景
+            if (playerX < 350) {
+                playerX += speed;
+            } else {
+                mapScrollX -= speed;
+                distanceToNextEncounter -= speed;
+            }
+        }
+        
+        if (keys.ArrowLeft) {
+            playerEl.style.transform = 'scaleX(-1)'; // 面向左
+            // 防止玩家走出畫面左側界線
+            if (playerX > 10) {
+                playerX -= speed;
+            } else if (mapScrollX < 0) { // 允許往回捲動背景
+                mapScrollX += speed;
+                distanceToNextEncounter += speed;
+            }
+        }
+    }
+
+    // 更新畫面渲染
+    function updateVisuals() {
+        playerEl.style.left = playerX + 'px';
+        // 視差滾動：天空移動較慢，地面移動較快
+        sceneEl.style.backgroundPositionX = (mapScrollX * 0.3) + 'px';
+        groundEl.style.backgroundPositionX = mapScrollX + 'px';
+    }
+
+    // 檢查是否遭遇怪物
+    function checkEncounter() {
+        if (distanceToNextEncounter <= 0 && currentMonsterIndex < encounters.length) {
+            triggerCombat();
+        } else if (currentMonsterIndex >= encounters.length) {
+            endGame(true);
+        }
+    }
+
+    // 觸發戰鬥
+    function triggerCombat() {
+        gameState = 'combat';
+        keys.ArrowLeft = false;
+        keys.ArrowRight = false;
         
         const currentData = encounters[currentMonsterIndex];
         monsterEl.innerText = currentData.sprite;
         monsterEl.style.display = 'block';
-        monsterEl.style.right = '-100px';
-
-        // 模擬卷軸移動：怪物從右側進入畫面
+        monsterEl.style.opacity = '1';
+        
+        // 顯示對話框
         setTimeout(() => {
-            monsterEl.style.right = '150px';
-        }, 100);
+            dialogBox.style.display = 'flex';
+            questionText.innerText = currentData.question;
+            optionsContainer.innerHTML = '';
 
-        // 動畫結束後顯示問題
-        setTimeout(() => {
-            isAnimating = false;
-            showQuestion(currentData);
-        }, 600);
+            currentData.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = `${String.fromCharCode(65 + index)}. ${opt}`;
+                btn.onclick = () => handleAnswer(index, currentData.correctIndex);
+                optionsContainer.appendChild(btn);
+            });
+        }, 300);
     }
 
-    // 顯示問題與選項
-    function showQuestion(data) {
-        dialogBox.style.display = 'flex';
-        questionText.innerText = data.question;
-        optionsContainer.innerHTML = '';
-
-        data.options.forEach((opt, index) => {
-            const btn = document.createElement('button');
-            btn.className = 'option-btn';
-            btn.innerText = `${String.fromCharCode(65 + index)}. ${opt}`;
-            btn.onclick = () => handleAnswer(index, data.correctIndex);
-            optionsContainer.appendChild(btn);
-        });
-    }
-
-    // 處理答案邏輯
+    // 處理答題邏輯
     function handleAnswer(selectedIndex, correctIndex) {
         if (selectedIndex === correctIndex) {
-            // 答對邏輯
+            // 答對
             currentMonsterIndex++;
             updateStatus();
             dialogBox.style.display = 'none';
-            monsterDefeatedAnimation();
+            
+            // 怪物消失動畫
+            monsterEl.style.transition = 'opacity 0.5s';
+            monsterEl.style.opacity = '0';
+            
+            setTimeout(() => {
+                monsterEl.style.display = 'none';
+                monsterEl.style.transition = ''; // 重置
+                distanceToNextEncounter = Math.floor(Math.random() * 200) + 300; // 隨機設定下一隻怪物的距離
+                gameState = 'explore';
+            }, 500);
+            
         } else {
-            // 答錯邏輯
+            // 答錯
             currentHP--;
             updateStatus();
-            playerHitAnimation();
             
+            // 玩家受擊動畫
+            playerEl.style.transform = `${playerEl.style.transform.includes('-1') ? 'scaleX(-1)' : 'scaleX(1)'} translateX(-20px)`;
+            playerEl.style.color = 'red';
+            
+            setTimeout(() => {
+                playerEl.style.transform = playerEl.style.transform.replace(' translateX(-20px)', '');
+                playerEl.style.color = 'inherit';
+            }, 200);
+
             if (currentHP <= 0) {
                 endGame(false);
             } else {
@@ -262,34 +382,9 @@
         }
     }
 
-    // 擊敗怪物動畫
-    function monsterDefeatedAnimation() {
-        monsterEl.style.opacity = '0';
-        monsterEl.style.transform = 'scale(0.5)';
-        
-        setTimeout(() => {
-            monsterEl.style.display = 'none';
-            monsterEl.style.opacity = '1';
-            monsterEl.style.transform = 'scale(1)';
-            spawnMonster();
-        }, 500);
-    }
-
-    // 玩家受擊動畫
-    function playerHitAnimation() {
-        playerEl.style.transform = 'translateX(-20px)';
-        playerEl.style.color = 'red';
-        setTimeout(() => {
-            playerEl.style.transform = 'translateX(20px)';
-        }, 100);
-        setTimeout(() => {
-            playerEl.style.transform = 'translateX(0)';
-            playerEl.style.color = 'inherit';
-        }, 200);
-    }
-
-    // 結算遊戲結果
+    // 遊戲結束結算
     function endGame(isVictory) {
+        gameState = 'gameover';
         dialogBox.style.display = 'none';
         overlay.style.display = 'flex';
         
@@ -302,11 +397,9 @@
             overlayTitle.style.color = '#F44336';
             actionBtn.innerText = '重新挑戰';
         }
-        
-        actionBtn.onclick = initGame;
     }
 
-    // 綁定初始按鈕事件
+    // 綁定初始按鈕
     actionBtn.onclick = initGame;
 
 </script>
