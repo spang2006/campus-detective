@@ -3,443 +3,335 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>向量健康電子雞 - 進化版</title>
+<title>健康大富翁 - 模擬AI對戰</title>
 <style>
     body {
+        font-family: "Courier New", Courier, monospace;
+        background-color: #f4f4f9;
         display: flex;
         justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background-color: #f0f0f0;
-        font-family: "Courier New", Courier, monospace;
+        padding: 20px;
         margin: 0;
+        color: #333;
     }
-    #device {
-        background-color: #ffaa00;
-        padding: 25px;
-        border-radius: 40px 40px 50px 50px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.4), inset 0 5px 15px rgba(255,255,255,0.3);
-        width: 320px;
+    #game-container {
+        width: 800px;
+        display: flex;
+        gap: 20px;
+    }
+    #board {
+        display: flex;
+        flex-wrap: wrap;
+        width: 500px;
+        gap: 5px;
+    }
+    .space {
+        width: 110px;
+        height: 110px;
+        background-color: #fff;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 5px;
+        box-sizing: border-box;
+        font-size: 13px;
+        font-weight: bold;
         text-align: center;
         position: relative;
     }
-    #screen {
-        background-color: #9bbc0f;
-        border: 5px solid #222;
-        border-radius: 10px;
-        height: 240px;
-        margin-bottom: 25px;
-        position: relative;
+    .space-name { font-size: 14px; margin-bottom: 2px; }
+    .space-price { color: #d32f2f; }
+    .space-owner { color: #1976d2; font-size: 11px; }
+    .players-here {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        justify-content: center;
+        margin-top: 5px;
+    }
+    .token {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        color: white;
+        font-size: 10px;
+        line-height: 15px;
+        text-align: center;
+    }
+    #panel {
+        width: 280px;
+        background-color: #fff;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        padding: 15px;
         display: flex;
         flex-direction: column;
-        padding: 10px;
         box-sizing: border-box;
-        color: #0f380f;
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
-        cursor: pointer;
-        overflow: hidden;
     }
-    .stats {
-        display: flex;
-        justify-content: space-between;
-        font-size: 13px;
-        font-weight: bold;
-        visibility: hidden; 
-        margin-bottom: 5px;
-        flex-wrap: wrap;
+    .player-stats {
+        margin-bottom: 10px;
+        padding: 8px;
+        border: 1px solid #eee;
+        border-radius: 5px;
+        background-color: #fafafa;
     }
-    .stats-row {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 2px;
+    .active-player {
+        border-color: #4caf50;
+        background-color: #e8f5e9;
     }
-    #pet-container {
+    #log {
         flex-grow: 1;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        position: relative;
+        background-color: #222;
+        color: #0f0;
+        padding: 10px;
+        font-size: 12px;
+        overflow-y: auto;
+        border-radius: 5px;
+        height: 200px;
+        margin-top: 15px;
+        margin-bottom: 15px;
     }
-    
-    /* 進化特效圖層 */
-    #flash-overlay {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-color: white;
-        opacity: 0;
-        pointer-events: none;
-        z-index: 10;
-    }
-    @keyframes flash {
-        0% { opacity: 0; }
-        50% { opacity: 1; }
-        100% { opacity: 0; }
-    }
-    .anim-flash { animation: flash 1s ease-in-out; }
-
-    /* SVG 基礎設定 */
-    #pet-graphics {
-        width: 100px;
-        height: 100px;
-        display: none; 
-    }
-
-    /* 圖形部件色彩設定 */
-    .color-body-baby { fill: #fff59d; stroke: #222; stroke-width: 2; }
-    .color-body-teen { fill: #ffee58; stroke: #222; stroke-width: 2; }
-    .color-body-adult { fill: #fdd835; stroke: #222; stroke-width: 2; }
-    .color-head-adult { fill: #fff176; stroke: #222; stroke-width: 2; }
-    .color-beak { fill: #ff9800; stroke: #222; stroke-width: 1.5; }
-    .color-comb { fill: #e53935; stroke: #222; stroke-width: 2; }
-    .chicken-eye { fill: #222; }
-
-    /* 初始化狀態：蛋 */
-    #pet-text {
-        font-size: 60px;
-        display: inline-block;
-        user-select: none;
-    }
-
-    /* 動作動畫 */
-    @keyframes egg-shake {
-        0% { transform: translateX(0); }
-        25% { transform: translateX(-10px) rotate(-15deg); }
-        75% { transform: translateX(10px) rotate(15deg); }
-        100% { transform: translateX(0); }
-    }
-    @keyframes chicken-hop {
-        0%, 100% { transform: translateY(0) scaleX(1); }
-        50% { transform: translateY(-15px) scaleX(1); }
-        55% { transform: translateY(-15px) scaleX(1.1); }
-    }
-    @keyframes eye-blink {
-        0%, 90%, 100% { opacity: 1; }
-        95% { opacity: 0; }
-    }
-    @keyframes chicken-shiver {
-        0% { transform: translate(1px, 1px) rotate(0deg); }
-        20% { transform: translate(-2px, 0px) rotate(1deg); }
-        40% { transform: translate(2px, 1px) rotate(0deg); }
-        60% { transform: translate(-2px, 1px) rotate(0deg); }
-        80% { transform: translate(-1px, -1px) rotate(1deg); }
-        100% { transform: translate(1px, -1px) rotate(-1deg); }
-    }
-
-    .anim-egg-shake { animation: egg-shake 0.3s ease-in-out; }
-    .anim-chicken-hop { animation: chicken-hop 1.2s infinite ease-out; }
-    .anim-chicken-shiver { animation: chicken-shiver 0.3s infinite linear; }
-    .anim-eye-blink { animation: eye-blink 4s infinite; }
-
-    /* 睡眠與死亡通用文字/圖形 */
-    .sleep-text {
-        fill: #222; font-size: 20px; font-weight: bold; font-family: sans-serif;
-        opacity: 0; animation: eye-blink 1.5s infinite;
-    }
-    .dead-x-eye {
-        fill: none; stroke: #222; stroke-width: 3; stroke-linecap: round; display: none;
-    }
-
-    /* 根據屬性控制生命週期階段的顯示與隱藏 */
-    #stage-baby, #stage-teen, #stage-adult { display: none; }
-    #device[data-stage="baby"] #stage-baby { display: block; }
-    #device[data-stage="teen"] #stage-teen { display: block; }
-    #device[data-stage="adult"] #stage-adult { display: block; }
-
-    /* 特殊狀態觸發的 CSS 覆寫 (睡眠) */
-    #device[data-state="sleeping"] #pet-graphics {
-        animation: none; transform: translateY(15px) rotate(10deg);
-    }
-    #device[data-state="sleeping"] .sleep-text { opacity: 1; }
-    #device[data-state="sleeping"] .chicken-eye { display: none; }
-    #device[data-state="sleeping"] .hide-on-sleep { visibility: hidden; }
-
-    /* 特殊狀態觸發的 CSS 覆寫 (死亡) */
-    #device[data-state="dead"] #pet-graphics {
-        animation: none; transform: translateY(35px) scaleY(0.6) rotate(-90deg);
-    }
-    #device[data-state="dead"] .chicken-eye { display: none; }
-    #device[data-state="dead"] .dead-x-eye { display: block; }
-    #device[data-state="dead"] .hide-on-dead { visibility: hidden; }
-
-    /* 訊息與按鈕 */
-    #message-box {
-        font-size: 13px; min-height: 45px; background: rgba(15, 56, 15, 0.1);
-        border-radius: 5px; padding: 6px; text-align: left; line-height: 1.4; font-weight: bold;
-    }
-    .buttons { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 10px; }
     button {
-        background-color: #222; color: white; border: none; padding: 10px;
-        border-radius: 50%; width: 65px; height: 65px; cursor: pointer;
-        font-size: 14px; font-weight: bold; box-shadow: 0 5px 0 #000;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: bold;
+        background-color: #1976d2;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
     }
-    button:active { transform: translateY(5px); box-shadow: 0 0 0 #000; }
-    button:disabled { background-color: #666; box-shadow: 0 5px 0 #333; cursor: not-allowed; }
+    button:disabled {
+        background-color: #999;
+        cursor: not-allowed;
+    }
 </style>
 </head>
-<body data-state="egg">
+<body>
 
-<div id="device" data-stage="baby">
-    <div id="screen" onclick="interactScreen()">
-        <div id="flash-overlay"></div>
-        
-        <div class="stats" id="stats-bar">
-            <div class="stats-row">
-                <span>飽食:<span id="val-hunger">50</span></span>
-                <span>健康:<span id="val-health">80</span></span>
-            </div>
-            <div class="stats-row">
-                <span>心情:<span id="val-happiness">80</span></span>
-                <span>年齡:<span id="val-age">0</span></span>
-            </div>
-        </div>
-        
-        <div id="pet-container">
-            <div id="pet-text">🥚</div>
-            
-            <svg id="pet-graphics" viewBox="0 0 100 100">
-                <g id="stage-baby">
-                    <circle class="color-body-baby" cx="50" cy="70" r="16" />
-                    <polygon class="color-beak" points="50,65 55,60 45,60" />
-                    <circle class="chicken-eye anim-eye-blink" cx="46" cy="58" r="1.5" />
-                    <circle class="chicken-eye anim-eye-blink" cx="54" cy="58" r="1.5" />
-                    <path class="dead-x-eye" d="M44,56 L48,60 M48,56 L44,60" />
-                    <path class="dead-x-eye" d="M52,56 L56,60 M56,56 L52,60" />
-                </g>
+<div id="game-container">
+    <div id="board"></div>
 
-                <g id="stage-teen">
-                    <circle class="color-body-teen" cx="50" cy="65" r="22" />
-                    <path class="color-comb hide-on-dead" d="M45,43 C45,35 55,35 55,43 Z" />
-                    <path class="color-body-teen hide-on-sleep" d="M28,65 C23,60 23,70 28,73 Z" />
-                    <path class="color-body-teen hide-on-sleep" d="M72,65 C77,60 77,70 72,73 Z" />
-                    <polygon class="color-beak" points="50,56 56,49 44,49" />
-                    <circle class="chicken-eye anim-eye-blink" cx="45" cy="46" r="2" />
-                    <circle class="chicken-eye anim-eye-blink" cx="55" cy="46" r="2" />
-                    <path class="dead-x-eye" d="M42,43 L48,49 M48,43 L42,49" />
-                    <path class="dead-x-eye" d="M52,43 L58,49 M58,43 L52,49" />
-                </g>
-
-                <g id="stage-adult">
-                    <circle class="color-body-adult" cx="50" cy="70" r="28" />
-                    <circle class="color-head-adult" cx="50" cy="45" r="18" />
-                    <path class="color-comb hide-on-dead" d="M38,33 C38,15 45,15 50,27 C55,15 62,15 62,33 Z" />
-                    <path class="color-body-adult hide-on-sleep" d="M22,70 C15,65 15,75 22,80 Z" />
-                    <path class="color-body-adult hide-on-sleep" d="M78,70 C85,65 85,75 78,80 Z" />
-                    <polygon class="color-beak" points="50,55 56,48 44,48" />
-                    <circle class="chicken-eye anim-eye-blink" cx="44" cy="42" r="2.5" />
-                    <circle class="chicken-eye anim-eye-blink" cx="56" cy="42" r="2.5" />
-                    <path class="dead-x-eye" d="M41,39 L47,45 M47,39 L41,45" />
-                    <path class="dead-x-eye" d="M53,39 L59,45 M59,39 L53,45" />
-                </g>
-                
-                <text class="sleep-text anim-eye-blink" x="70" y="30">z</text>
-                <text class="sleep-text anim-eye-blink" x="80" y="20" style="animation-delay: 0.5s">Z</text>
-            </svg>
-        </div>
-        <div id="message-box">系統：請點擊螢幕來孵化電子雞。</div>
-    </div>
-    
-    <div class="buttons">
-        <button id="btn-feed" onclick="action('feed', event)" disabled>飲食</button>
-        <button id="btn-water" onclick="action('water', event)" disabled>喝水</button>
-        <button id="btn-exercise" onclick="action('exercise', event)" disabled>運動</button>
-        <button id="btn-sleep" onclick="action('sleep', event)" disabled>睡眠</button>
+    <div id="panel">
+        <div id="player-list"></div>
+        <div id="log">系統：遊戲初始化完成。</div>
+        <button id="btn-roll" onclick="humanRoll()" disabled>輪到你擲骰子</button>
     </div>
 </div>
 
 <script>
-    let appState = 'egg';
-    let hatchProgress = 0;
-    const CLICKS_TO_HATCH = 5;
-    let gameLoop;
+    // 1. 地圖資料定義
+    const mapData = [
+        { id: 0, name: "起點", type: "start", info: "經過領 $200" },
+        { id: 1, name: "健身中心", type: "property", price: 100, rent: 20, owner: null },
+        { id: 2, name: "健康抽籤", type: "chance", info: "隨機事件" },
+        { id: 3, name: "有機超市", type: "property", price: 150, rent: 30, owner: null },
+        { id: 4, name: "急診室", type: "tax", info: "付費 $50", cost: 50 },
+        { id: 5, name: "睡眠中心", type: "property", price: 200, rent: 40, owner: null },
+        { id: 6, name: "健康抽籤", type: "chance", info: "隨機事件" },
+        { id: 7, name: "連鎖藥局", type: "property", price: 100, rent: 20, owner: null },
+        { id: 8, name: "復健科", type: "jail", info: "暫停一回合" },
+        { id: 9, name: "諮商所", type: "property", price: 150, rent: 30, owner: null },
+        { id: 10, name: "健康抽籤", type: "chance", info: "隨機事件" },
+        { id: 11, name: "體育館", type: "property", price: 200, rent: 40, owner: null }
+    ];
 
-    let stats = {
-        hunger: 50, health: 80, happiness: 80, age: 0
-    };
-    let currentStage = 'baby';
+    // 2. 玩家資料定義
+    const players = [
+        { id: 0, name: "真人玩家", isBot: false, money: 1000, pos: 0, color: "#e53935", sleep: 0 },
+        { id: 1, name: "電腦 A", isBot: true, money: 1000, pos: 0, color: "#1e88e5", sleep: 0 },
+        { id: 2, name: "電腦 B", isBot: true, money: 1000, pos: 0, color: "#43a047", sleep: 0 },
+        { id: 3, name: "電腦 C", isBot: true, money: 1000, pos: 0, color: "#fb8c00", sleep: 0 }
+    ];
 
-    const elStatsBar = document.getElementById('stats-bar');
-    const elHunger = document.getElementById('val-hunger');
-    const elHealth = document.getElementById('val-health');
-    const elHappiness = document.getElementById('val-happiness');
-    const elAge = document.getElementById('val-age');
-    const elPetText = document.getElementById('pet-text');
-    const elPetGraphics = document.getElementById('pet-graphics');
-    const elMessage = document.getElementById('message-box');
-    const elDevice = document.getElementById('device');
-    const elFlash = document.getElementById('flash-overlay');
-    const buttons = document.querySelectorAll('button');
+    let turnIndex = 0;
+    const elBoard = document.getElementById('board');
+    const elPlayerList = document.getElementById('player-list');
+    const elLog = document.getElementById('log');
+    const btnRoll = document.getElementById('btn-roll');
 
-    const knowledgeBase = {
-        feed: ["健康知識：均衡攝取六大類食物，維持穩定的血糖波動。", "健康知識：成年人每日建議攝取蔬菜量應達 3 份。"],
-        water: ["健康知識：每日建議飲水量為：體重 x 30 毫升。", "健康知識：口渴是缺水的落後指標，應定時補充水分。"],
-        exercise: ["健康知識：每週應至少進行 150 分鐘中等強度有氧運動。", "健康知識：規律運動能釋放腦內啡，降低心血管疾病風險。"],
-        sleep: ["健康知識：成年人每日建議睡眠時間為 7 至 9 小時。", "健康知識：深度睡眠期是組織修復、記憶鞏固的關鍵階段。"],
-        idle: ["健康提示：久坐超過一小時應起身活動，降低代謝症候群風險。", "健康提示：長期壓力會影響皮質醇分泌，損害免疫力。"]
-    };
-
-    const actionEffects = {
-        feed: { hunger: 30, health: 5, happiness: 5 },
-        water: { hunger: 5, health: 15, happiness: 5 },
-        exercise: { hunger: -20, health: 20, happiness: 15 },
-        sleep: { hunger: -10, health: 25, happiness: 10 }
-    };
-
-    function triggerAnimation(el, animClass) {
-        el.classList.remove(animClass); 
-        void el.offsetWidth;
-        el.classList.add(animClass);
+    // 系統日誌輸出
+    function log(msg) {
+        elLog.innerHTML += `<div>${msg}</div>`;
+        elLog.scrollTop = elLog.scrollHeight;
     }
 
-    window.interactScreen = function() {
-        if (appState !== 'egg') return;
-        hatchProgress++;
-        triggerAnimation(elPetText, 'anim-egg-shake');
-
-        if (hatchProgress >= CLICKS_TO_HATCH) {
-            hatch();
-        } else {
-            elMessage.innerText = `蛋殼出現裂縫... (${hatchProgress}/${CLICKS_TO_HATCH})`;
-        }
-    };
-
-    function hatch() {
-        appState = 'active';
-        elPetText.style.display = 'none';
-        elPetGraphics.style.display = 'block';
-        elPetGraphics.classList.add('anim-chicken-hop');
-        elStatsBar.style.visibility = 'visible';
-        buttons.forEach(btn => btn.disabled = false);
-        elMessage.innerText = "系統提示：雛鳥已孵化。時間流逝將使年齡增長並觸發進化。";
-        
-        updateStatsDisplay();
-        updateUI();
-        gameLoop = setInterval(timeTick, 5000);
-    }
-
-    window.action = function(type, event) {
-        event.stopPropagation();
-        if (appState === 'dead' || appState === 'sleeping' || appState === 'evolving') return;
-
-        const effect = actionEffects[type];
-        stats.hunger = Math.min(100, Math.max(0, stats.hunger + effect.hunger));
-        stats.health = Math.min(100, Math.max(0, stats.health + effect.health));
-        stats.happiness = Math.min(100, Math.max(0, stats.happiness + effect.happiness));
-        
-        const messages = knowledgeBase[type];
-        elMessage.innerText = messages[Math.floor(Math.random() * messages.length)];
-
-        if (type === 'sleep') {
-            appState = 'sleeping';
-            elDevice.setAttribute('data-state', 'sleeping');
-            buttons.forEach(btn => btn.disabled = true);
-            setTimeout(() => {
-                if (appState === 'dead') return;
-                appState = 'active';
-                elDevice.removeAttribute('data-state');
-                buttons.forEach(btn => btn.disabled = false);
-                updateUI();
-            }, 3000);
-        } else if (type === 'exercise') {
-            elPetGraphics.classList.remove('anim-chicken-hop');
-            void elPetGraphics.offsetWidth;
-            elPetGraphics.classList.add('anim-chicken-hop');
-            elPetGraphics.style.animationDuration = '0.4s';
-            setTimeout(() => { 
-                if (appState === 'active') {
-                    elPetGraphics.style.animationDuration = '1.2s';
-                    updateUI(); 
+    // 繪製地圖與玩家位置
+    function renderBoard() {
+        elBoard.innerHTML = '';
+        mapData.forEach((space, index) => {
+            const div = document.createElement('div');
+            div.className = 'space';
+            let html = `<div class="space-name">${space.name}</div>`;
+            
+            if (space.type === 'property') {
+                html += `<div class="space-price">$${space.price}</div>`;
+                if (space.owner !== null) {
+                    html += `<div class="space-owner">擁有者: ${players[space.owner].name}</div>`;
+                } else {
+                    html += `<div class="space-owner">無人擁有</div>`;
                 }
-            }, 1500);
-        } else {
-            elPetGraphics.classList.add('anim-chicken-hop');
-            setTimeout(() => { if (appState === 'active') updateUI(); }, 1000);
+            } else {
+                html += `<div class="space-owner">${space.info}</div>`;
+            }
+
+            // 標示該格位上的玩家
+            let playersHtml = '<div class="players-here">';
+            players.forEach(p => {
+                if (p.pos === index) {
+                    playersHtml += `<div class="token" style="background-color:${p.color}">${p.id+1}</div>`;
+                }
+            });
+            playersHtml += '</div>';
+
+            div.innerHTML = html + playersHtml;
+            elBoard.appendChild(div);
+        });
+    }
+
+    // 更新右側玩家數值
+    function renderPlayers() {
+        elPlayerList.innerHTML = '';
+        players.forEach((p, index) => {
+            const div = document.createElement('div');
+            div.className = `player-stats ${index === turnIndex ? 'active-player' : ''}`;
+            div.innerHTML = `
+                <strong><span style="color:${p.color}">■</span> ${p.name}</strong> 
+                <br>資金: $${p.money} 
+                ${p.sleep > 0 ? '(復健中)' : ''}
+            `;
+            elPlayerList.appendChild(div);
+        });
+    }
+
+    // 隨機事件庫
+    const chances = [
+        { msg: "維持規律運動，獲得健保紅利 $50！", val: 50 },
+        { msg: "熬夜免疫力下降，支付掛號費 $30。", val: -30 },
+        { msg: "購買無農藥蔬菜，花費 $40。", val: -40 },
+        { msg: "參加健康講座，獲得車馬費 $20。", val: 20 }
+    ];
+
+    // 回合管理中樞
+    function processTurn() {
+        renderPlayers();
+        renderBoard();
+        const p = players[turnIndex];
+
+        if (p.sleep > 0) {
+            log(`[${p.name}] 正在復健科休息，暫停一回合。`);
+            p.sleep--;
+            endTurn();
+            return;
         }
 
-        updateStatsDisplay();
-        checkVitalSigns();
+        if (p.isBot) {
+            btnRoll.disabled = true;
+            btnRoll.innerText = "電腦行動中...";
+            // 模擬 AI 思考延遲
+            setTimeout(() => {
+                executeMove(p);
+            }, 1000);
+        } else {
+            btnRoll.disabled = false;
+            btnRoll.innerText = "輪到你擲骰子";
+        }
+    }
+
+    // 真人玩家點擊擲骰
+    window.humanRoll = function() {
+        btnRoll.disabled = true;
+        executeMove(players[turnIndex]);
     };
 
-    function timeTick() {
-        if (appState === 'dead' || appState === 'evolving') return;
-
-        stats.hunger = Math.max(0, stats.hunger - 2);
-        stats.health = Math.max(0, stats.health - 1);
-        stats.happiness = Math.max(0, stats.happiness - 2);
-        stats.age += 1;
-
-        if (Math.random() < 0.2 && appState === 'active') {
-            const msgs = knowledgeBase['idle'];
-            elMessage.innerText = msgs[Math.floor(Math.random() * msgs.length)];
-        }
-
-        updateStatsDisplay();
-        checkVitalSigns();
-        checkEvolution();
-        if (appState === 'active') updateUI();
-    }
-
-    function checkEvolution() {
-        if (stats.age >= 5 && currentStage === 'baby') {
-            triggerEvolution('teen', '亞成鳥');
-        } else if (stats.age >= 10 && currentStage === 'teen') {
-            triggerEvolution('adult', '成鳥');
-        }
-    }
-
-    function triggerEvolution(newStage, stageName) {
-        appState = 'evolving';
-        buttons.forEach(btn => btn.disabled = true);
-        elPetGraphics.classList.remove('anim-chicken-hop', 'anim-chicken-shiver');
+    // 執行移動與判定
+    function executeMove(player) {
+        const dice = Math.floor(Math.random() * 6) + 1;
+        log(`[${player.name}] 擲出了 ${dice} 點。`);
         
-        triggerAnimation(elFlash, 'anim-flash');
-        elMessage.innerText = `系統運算中：個體正在進化為 [ ${stageName} ] ...`;
-
-        setTimeout(() => {
-            currentStage = newStage;
-            elDevice.setAttribute('data-stage', currentStage);
-        }, 500); 
-
-        setTimeout(() => {
-            if (stats.health > 0 && stats.hunger > 0) {
-                appState = 'active';
-                buttons.forEach(btn => btn.disabled = false);
-                elMessage.innerText = `進化完成。已進入 ${stageName} 階段。`;
-                updateUI();
-            }
-        }, 1000);
-    }
-
-    function updateStatsDisplay() {
-        elHunger.innerText = stats.hunger;
-        elHealth.innerText = stats.health;
-        elHappiness.innerText = stats.happiness;
-        elAge.innerText = stats.age;
-    }
-
-    function updateUI() {
-        if (appState !== 'active') return;
-
-        if (stats.health < 30 || stats.hunger < 30 || stats.happiness < 30) {
-            elPetGraphics.classList.remove('anim-chicken-hop');
-            elPetGraphics.classList.add('anim-chicken-shiver');
-        } else {
-            elPetGraphics.classList.remove('anim-chicken-shiver');
-            if (!elPetGraphics.classList.contains('anim-chicken-hop')) {
-                elPetGraphics.classList.add('anim-chicken-hop');
-            }
+        let oldPos = player.pos;
+        player.pos += dice;
+        
+        // 經過起點處理
+        if (player.pos >= mapData.length) {
+            player.pos = player.pos % mapData.length;
+            player.money += 200;
+            log(`[${player.name}] 經過起點，領取 $200 健康津貼。`);
         }
+
+        renderBoard();
+        const space = mapData[player.pos];
+        log(`[${player.name}] 走到了「${space.name}」。`);
+
+        // 判定踩到的格子類型
+        if (space.type === 'property') {
+            if (space.owner === null) {
+                // 空地：AI 預設只要錢夠就買，真人則跳出提示框
+                if (player.isBot) {
+                    if (player.money >= space.price) {
+                        buyProperty(player, space);
+                    } else {
+                        log(`[${player.name}] 資金不足，放棄購買。`);
+                    }
+                } else {
+                    if (player.money >= space.price) {
+                        const confirmBuy = confirm(`「${space.name}」目前無人擁有。\n價格：$${space.price}\n租金收益：$${space.rent}\n請問是否購買？`);
+                        if (confirmBuy) buyProperty(player, space);
+                    } else {
+                        alert("資金不足以購買此設施。");
+                    }
+                }
+            } else if (space.owner !== player.id) {
+                // 別人的地：付過路費
+                const rent = space.rent;
+                player.money -= rent;
+                players[space.owner].money += rent;
+                log(`[${player.name}] 支付了 $${rent} 使用費給 ${players[space.owner].name}。`);
+            }
+        } 
+        else if (space.type === 'chance') {
+            const chance = chances[Math.floor(Math.random() * chances.length)];
+            player.money += chance.val;
+            log(`[${player.name}] 隨機事件：${chance.msg}`);
+        }
+        else if (space.type === 'tax') {
+            player.money -= space.cost;
+            log(`[${player.name}] 支付了醫療費用 $${space.cost}。`);
+        }
+        else if (space.type === 'jail') {
+            player.sleep = 1;
+            log(`[${player.name}] 進入復健科，下次將暫停一回合。`);
+        }
+
+        // 延遲結束回合，讓視覺有停留時間
+        setTimeout(() => {
+            endTurn();
+        }, 800);
     }
 
-    function checkVitalSigns() {
-        if (stats.health <= 0 || stats.hunger <= 0) {
-            appState = 'dead';
-            elDevice.setAttribute('data-state', 'dead');
-            elMessage.innerText = "系統警告：生命徵象低於閾值，判定死亡。流程終止。";
-            buttons.forEach(btn => btn.disabled = true);
-            clearInterval(gameLoop);
-        }
+    // 購買設施邏輯
+    function buyProperty(player, space) {
+        player.money -= space.price;
+        space.owner = player.id;
+        log(`[${player.name}] 投資了「${space.name}」。`);
     }
+
+    // 結束回合並換人
+    function endTurn() {
+        // 簡單破產判定 (直接扣至負數，未做遊戲結束機制)
+        if (players[turnIndex].money < 0) {
+            log(`⚠️ [${players[turnIndex].name}] 資金為負，面臨破產風險！`);
+        }
+
+        turnIndex = (turnIndex + 1) % players.length;
+        processTurn();
+    }
+
+    // 啟動遊戲
+    processTurn();
+
 </script>
 </body>
 </html>
