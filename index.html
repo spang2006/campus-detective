@@ -1,356 +1,230 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>健康偵探：大學生昏迷事件簿</title>
-    <style>
-        body {
-            font-family: "Microsoft JhengHei", sans-serif;
-            background-color: #f0f4f8; /* 淺灰藍背景 */
-            color: #2d3748; /* 深灰字體，易於閱讀 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        #game-container {
-            background-color: #ffffff;
-            width: 100%;
-            max-width: 800px;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-        }
-        h1, h2 {
-            color: #2b6cb0; /* 主標題使用柔和的深藍色 */
-            text-align: center;
-        }
-        .story-text {
-            font-size: 1.2rem;
-            line-height: 1.6;
-            margin-bottom: 20px;
-            text-align: left;
-            padding: 15px;
-            background-color: #ebf8ff; /* 淺藍色對話框背景 */
-            border-left: 5px solid #4299e1;
-            border-radius: 5px;
-            color: #2a4365;
-        }
-        .question-text {
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            font-weight: bold;
-            color: #2d3748;
-        }
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            background-color: #edf2f7; /* 按鈕淺灰背景 */
-            color: #2b6cb0; /* 按鈕深藍字體 */
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            font-weight: bold;
-            text-align: left;
-            transition: all 0.2s ease-in-out;
-        }
-        .btn:hover {
-            background-color: #bee3f8; /* 懸停時變淺藍 */
-            border-color: #90cdf4;
-            transform: translateY(-2px);
-        }
-        .center-btn {
-            text-align: center;
-            background-color: #4299e1;
-            color: white;
-            border: none;
-        }
-        .center-btn:hover {
-            background-color: #3182ce;
-        }
-        #status-bar {
-            display: flex;
-            justify-content: space-between;
-            font-size: 1.1rem;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 10px;
-            color: #4a5568;
-            font-weight: bold;
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>健康電子雞</title>
+<style>
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #e0e0e0;
+        font-family: monospace;
+        margin: 0;
+    }
+    #device {
+        background-color: #d84343;
+        padding: 25px;
+        border-radius: 40px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        width: 320px;
+        text-align: center;
+    }
+    #screen {
+        background-color: #879e86;
+        border: 4px solid #222;
+        border-radius: 10px;
+        height: 220px;
+        margin-bottom: 25px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        box-sizing: border-box;
+        color: #111;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+    }
+    .stats {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+    #pet {
+        font-size: 50px;
+        flex-grow: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    #message-box {
+        font-size: 13px;
+        min-height: 45px;
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 5px;
+        padding: 6px;
+        text-align: left;
+        line-height: 1.4;
+    }
+    .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        gap: 10px;
+    }
+    button {
+        background-color: #222;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 50%;
+        width: 65px;
+        height: 65px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        box-shadow: 0 4px 0 #000;
+        transition: transform 0.1s, box-shadow 0.1s;
+    }
+    button:active {
+        transform: translateY(4px);
+        box-shadow: 0 0 0 #000;
+    }
+    button:disabled {
+        background-color: #666;
+        box-shadow: none;
+        transform: none;
+        cursor: not-allowed;
+    }
+</style>
 </head>
 <body>
 
-<div id="game-container">
-    <div id="status-bar" class="hidden">
-        <span id="stage-display">🗺️ 關卡：1 / 3</span>
-        <span id="score-display">🏅 偵探積分：0</span>
+<div id="device">
+    <div id="screen">
+        <div class="stats">
+            <span>飽食: <span id="val-hunger">50</span></span>
+            <span>健康: <span id="val-health">80</span></span>
+            <span>心情: <span id="val-happiness">80</span></span>
+        </div>
+        <div id="pet">( • ω • )</div>
+        <div id="message-box">系統初始化完成，請開始操作。</div>
     </div>
-
-    <div id="intro-screen">
-        <h1>🕵️‍♂️ 健康偵探：大學生昏迷事件簿 📋</h1>
-        <p class="story-text">
-            🖥️ 系統啟動。你是一名專門調查校園健康危害的「健康偵探」。<br>
-            🚨 今日接獲通報，一名大學生在宿舍突然倒地不起。<br>
-            🔍 你必須透過現場的蛛絲馬跡，推理出導致他昏迷的健康風險因素。<br>
-            💡 你的決策將決定他是否能獲得正確的救援與後續衛教指導。
-        </p>
-        <button class="btn center-btn" onclick="startGame()">🚀 開始調查</button>
-    </div>
-
-    <div id="game-screen" class="hidden">
-        <h2 id="stage-title"></h2>
-        <div id="story-box" class="story-text"></div>
-        <div id="question-box" class="question-text"></div>
-        <div id="options-box"></div>
-    </div>
-
-    <div id="ending-screen" class="hidden">
-        <h1 id="ending-title"></h1>
-        <div id="ending-text" class="story-text"></div>
-        <button class="btn center-btn" onclick="location.reload()">🔄 重新調查</button>
+    <div class="buttons">
+        <button id="btn-feed" onclick="action('feed')">飲食</button>
+        <button id="btn-water" onclick="action('water')">喝水</button>
+        <button id="btn-exercise" onclick="action('exercise')">運動</button>
+        <button id="btn-sleep" onclick="action('sleep')">睡眠</button>
     </div>
 </div>
 
 <script>
-    const stages = [
-        {
-            title: "📍 第一關：勘查現場（飲食與作息 🍔🏃‍♂️）",
-            story: "🚪 你進入昏迷學生的宿舍，桌上堆滿了外送紙盒與飲料杯。你戴上手套，開始檢查他的生活軌跡...",
-            questions: [
-                {
-                    q: "你在垃圾桶發現他昨晚的宵夜包裝，身為偵探，你判斷哪種食物組合對隔日精神與腸胃負擔的影響最小？ 🤔",
-                    options: [
-                        { text: "🍗 A. 炸雞排與全糖珍珠奶茶", score: 0 },
-                        { text: "🍢 B. 烤肉串與無糖綠茶", score: 5 },
-                        { text: "🥣 C. 無糖優格與燕麥片", score: 10 }
-                    ]
-                },
-                {
-                    q: "檢查電腦紀錄，發現他經常連續打遊戲超過 6 小時。針對久坐行為，較具保護因子的建議是？ 🪑",
-                    options: [
-                        { text: "🎮 A. 連續坐 6 小時無妨，年輕人代謝快", score: 0 },
-                        { text: "🤸 B. 每 2 小時在座位上伸個懶腰", score: 5 },
-                        { text: "🚶 C. 每 50 分鐘起身走動 10 分鐘", score: 10 }
-                    ]
-                },
-                {
-                    q: "他的抽屜裡有許多提神飲料。關於水分補充，正確的觀念是？ 💧",
-                    options: [
-                        { text: "☕ A. 提神飲料含有糖與咖啡因，不可完全取代白開水", score: 10 },
-                        { text: "🍵 B. 喝無糖茶或氣泡水為主，不喝白開水", score: 5 },
-                        { text: "🥤 C. 只要是液體都可以補充水分，喝提神飲料就好", score: 0 }
-                    ]
-                },
-                {
-                    q: "室友表示他經常熬夜，假日再瘋狂補眠。對於睡眠作息的評估為？ 🛌",
-                    options: [
-                        { text: "😴 A. 平日熬夜，假日連續睡 14 小時把時數補齊即可", score: 0 },
-                        { text: "💤 B. 每天只睡 5 小時，全靠中午午休補眠", score: 5 },
-                        { text: "🌙 C. 這種做法會打亂生理時鐘，應保持每天 7-8 小時規律作息", score: 10 }
-                    ]
-                },
-                {
-                    q: "你發現角落有積灰塵的運動鞋。根據衛福部建議，大學生的運動量應達到何種標準？ 👟",
-                    options: [
-                        { text: "🏃 A. 每週至少 150 分鐘中度身體活動", score: 10 },
-                        { text: "🏋️ B. 每週進行一次 1 小時的高強度運動即可", score: 5 },
-                        { text: "🛋️ C. 偶爾想到再運動即可", score: 0 }
-                    ]
-                }
-            ]
-        },
-        {
-            title: "🗣️ 第二關：人際訪談（心理健康與壓力 🌧️💆‍♂️）",
-            story: "📝 你找到他的室友與同學進行訪談，試圖了解他近期的心理狀態與壓力源...",
-            questions: [
-                {
-                    q: "同學表示他最近面臨專題報告，經常焦慮到抓頭髮。下列哪種是健康的壓力應對方式？ 🤯",
-                    options: [
-                        { text: "🚬 A. 透過大量抽菸與喝酒來麻痺神經", score: 0 },
-                        { text: "⏱️ B. 拖延到最後一刻，靠腎上腺素爆發力完成", score: 5 },
-                        { text: "📋 C. 將任務拆解，制定合理的進度計畫", score: 10 }
-                    ]
-                },
-                {
-                    q: "室友提到他最近情緒低落，拒絕所有社交活動。身為偵探，你應如何解讀這個訊號？ 🧩",
-                    options: [
-                        { text: "🤝 A. 這是憂鬱傾向的警訊，應主動提供陪伴並尋求資源", score: 10 },
-                        { text: "📱 B. 傳訊息關心一下，若他不回就算了", score: 5 },
-                        { text: "🤫 C. 只是單純想安靜，不用過度解讀", score: 0 }
-                    ]
-                },
-                {
-                    q: "當他感到肌肉緊繃、心跳加速等急性壓力反應時，應採取何種放鬆技巧？ 💓",
-                    options: [
-                        { text: "🧋 A. 喝含有高糖分的飲料壓驚", score: 0 },
-                        { text: "📱 B. 轉移注意力，一直滑手機短影音", score: 5 },
-                        { text: "🧘 C. 進行腹式呼吸法與漸進式肌肉放鬆", score: 10 }
-                    ]
-                },
-                {
-                    q: "他在行事曆上把所有空檔排滿了社團與打工，不懂得拒絕別人。這反映了什麼現象？ 🗓️",
-                    options: [
-                        { text: "🦸 A. 這是時間管理大師的表現", score: 0 },
-                        { text: "💪 B. 雖然抱怨很累，但認為趁年輕應該多硬撐", score: 5 },
-                        { text: "🚧 C. 缺乏建立個人界線的能力，容易導致耗竭（Burnout）", score: 10 }
-                    ]
-                },
-                {
-                    q: "如果發現他已出現持續兩週以上的嚴重失眠與負面念頭，正確的介入方式是？ 🆘",
-                    options: [
-                        { text: "🛕 A. 去廟裡收驚或尋求宗教偏方", score: 0 },
-                        { text: "🍻 B. 找朋友訴苦喝悶酒發洩", score: 5 },
-                        { text: "🏥 C. 建議並陪同尋求學校心理諮商中心或身心科協助", score: 10 }
-                    ]
-                }
-            ]
-        },
-        {
-            title: "📁 第三關：醫療紀錄（就醫行為與素養 🏥💊）",
-            story: "💻 最後，你打開他的醫藥箱與瀏覽器的搜尋紀錄，確認他在身體不適時的處置方式...",
-            questions: [
-                {
-                    q: "醫藥箱裡有上次感冒沒吃完的抗生素。他搜尋了「喉嚨痛吃舊藥可以嗎」。正確處置是？ 💊",
-                    options: [
-                        { text: "🤧 A. 只要症狀相似，可以把剩下的抗生素吃完", score: 0 },
-                        { text: "🏪 B. 去藥局向藥師買一般成藥緩解症狀就好", score: 5 },
-                        { text: "🚫 C. 絕對不行，抗生素需由醫師處方且須按療程吃完", score: 10 }
-                    ]
-                },
-                {
-                    q: "搜尋紀錄顯示他曾查詢「胸口刺痛喝符水有效嗎」。面對不明劇烈疼痛，正確的行為是？ ⚡",
-                    options: [
-                        { text: "🚑 A. 立即前往急診或撥打 119", score: 10 },
-                        { text: "💊 B. 先吞止痛藥忍耐，等天亮再說", score: 5 },
-                        { text: "🔮 C. 先嘗試網路上的偏方，無效再看醫生", score: 0 }
-                    ]
-                },
-                {
-                    q: "他之前拿了三天的處方藥，吃一天覺得好多了就自行停藥。這種行為的風險是？ 🛑",
-                    options: [
-                        { text: "🧠 A. 減少藥物副作用，非常聰明", score: 0 },
-                        { text: "🤷 B. 偶爾忘記吃沒關係，想起來再補吃兩包", score: 5 },
-                        { text: "🦠 C. 可能導致病情反撲或產生抗藥性", score: 10 }
-                    ]
-                },
-                {
-                    q: "對於網路上的健康與醫療資訊，他應該具備何種識讀能力？ 🌐",
-                    options: [
-                        { text: "🛒 A. 看到網紅或社群分享就相信並購買相關產品", score: 0 },
-                        { text: "🤔 B. 參考網友經驗，自行判斷買保健食品吃", score: 5 },
-                        { text: "✅ C. 透過衛福部、國健署或醫療機構官方網站查證資訊", score: 10 }
-                    ]
-                },
-                {
-                    q: "他從來沒有做過健康檢查。大學生應該如何看待定期健檢？ 🩺",
-                    options: [
-                        { text: "👴 A. 年輕人身體好，等老了再來做健檢就好", score: 0 },
-                        { text: "📄 B. 學校有規定才做，報告結果出來也不太在意", score: 5 },
-                        { text: "🔍 C. 健檢是及早發現隱藏風險的關鍵，並應主動追蹤異常數值", score: 10 }
-                    ]
-                }
-            ]
-        }
-    ];
+    // 狀態變數初始化
+    let stats = {
+        hunger: 50,
+        health: 80,
+        happiness: 80
+    };
 
-    let currentStageIndex = 0;
-    let currentQuestionIndex = 0;
-    let score = 0;
+    let isAlive = true;
 
-    function startGame() {
-        document.getElementById('intro-screen').classList.add('hidden');
-        document.getElementById('status-bar').classList.remove('hidden');
-        document.getElementById('game-screen').classList.remove('hidden');
-        loadStage();
-    }
+    // DOM 元素參考
+    const elHunger = document.getElementById('val-hunger');
+    const elHealth = document.getElementById('val-health');
+    const elHappiness = document.getElementById('val-happiness');
+    const elPet = document.getElementById('pet');
+    const elMessage = document.getElementById('message-box');
+    const buttons = document.querySelectorAll('button');
 
-    function loadStage() {
-        const stage = stages[currentStageIndex];
-        document.getElementById('stage-title').innerText = stage.title;
-        document.getElementById('story-box').innerText = stage.story;
-        document.getElementById('stage-display').innerText = `🗺️ 關卡：${currentStageIndex + 1} / ${stages.length}`;
-        currentQuestionIndex = 0;
-        loadQuestion();
-    }
+    // 健康知識資料庫
+    const knowledgeBase = {
+        feed: [
+            "健康知識：國民飲食指南建議，均衡攝取全穀雜糧、豆魚蛋肉、蔬菜、水果、乳品及堅果種子六大類食物。",
+            "健康知識：每餐蔬菜攝取量應大於或等於水果量，以維持穩定的血糖波動。"
+        ],
+        water: [
+            "健康知識：一般成人每日建議飲水量約為體重(公斤)乘以 30 毫升。",
+            "健康知識：口渴是身體缺水的落後指標，應養成定時定量補充水分的習慣。"
+        ],
+        exercise: [
+            "健康知識：世界衛生組織建議，18至64歲成人每週應至少進行 150 分鐘中等強度有氧運動。",
+            "健康知識：規律運動有助於釋放腦內啡，降低罹患心血管疾病的風險並提升睡眠品質。"
+        ],
+        sleep: [
+            "健康知識：多數成年人每日建議睡眠時間為 7 至 9 小時。",
+            "健康知識：深度睡眠期為人體組織修復、免疫系統運作與記憶力鞏固的關鍵階段。"
+        ],
+        idle: [
+            "健康提示：久坐超過一小時應起身活動，降低代謝症候群風險。",
+            "健康提示：長期處於壓力狀態將導致皮質醇分泌異常，影響免疫力。"
+        ]
+    };
 
-    function loadQuestion() {
-        const stage = stages[currentStageIndex];
-        const question = stage.questions[currentQuestionIndex];
-        
-        document.getElementById('question-box').innerText = `🔍 [線索 ${currentQuestionIndex + 1}/5] ${question.q}`;
-        
-        const optionsBox = document.getElementById('options-box');
-        optionsBox.innerHTML = '';
-        
-        question.options.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.className = 'btn';
-            btn.innerText = opt.text;
-            btn.onclick = () => selectOption(opt.score);
-            optionsBox.appendChild(btn);
-        });
-    }
+    // 互動行為對數值的影響權重
+    const actionEffects = {
+        feed: { hunger: 30, health: 5, happiness: 5 },
+        water: { hunger: 5, health: 15, happiness: 5 },
+        exercise: { hunger: -20, health: 20, happiness: 15 },
+        sleep: { hunger: -10, health: 25, happiness: 10 }
+    };
 
-    function selectOption(points) {
-        score += points;
-        document.getElementById('score-display').innerText = `🏅 偵探積分：${score}`;
-        
-        currentQuestionIndex++;
-        
-        if (currentQuestionIndex < stages[currentStageIndex].questions.length) {
-            loadQuestion();
+    // 更新畫面渲染
+    function updateUI() {
+        elHunger.innerText = stats.hunger;
+        elHealth.innerText = stats.health;
+        elHappiness.innerText = stats.happiness;
+
+        if (!isAlive) return;
+
+        if (stats.health <= 0 || stats.hunger <= 0) {
+            triggerDeath();
+        } else if (stats.health < 30 || stats.hunger < 30) {
+            elPet.innerText = "(;´Д`)";
         } else {
-            currentStageIndex++;
-            if (currentStageIndex < stages.length) {
-                loadStage();
-            } else {
-                showEnding();
-            }
+            elPet.innerText = "( • ω • )";
         }
     }
 
-    function showEnding() {
-        document.getElementById('game-screen').classList.add('hidden');
-        document.getElementById('status-bar').classList.add('hidden');
-        document.getElementById('ending-screen').classList.remove('hidden');
-        
-        const endingTitle = document.getElementById('ending-title');
-        const endingText = document.getElementById('ending-text');
-        
-        // 滿分 150
-        if (score >= 120) {
-            endingTitle.innerText = "🌟 好結局：【真相大白，精準救援】 🚑✨";
-            endingTitle.style.color = "#38a169"; // 綠色
-            endingText.innerHTML = `🏆 最終得分：${score} 分。<br><br>
-            憑藉你敏銳的判斷與紮實的健康知識，你準確找出了導致他昏迷的核心原因：長期不良飲食、睡眠剝奪、壓力超載以及錯誤的就醫觀念。<br><br>
-            👨‍⚕️ 救護人員根據你的報告，迅速進行了正確的處置。學生康復後，在你的衛教指導下，開始重建健康的生活型態。你成功阻止了一場悲劇！🎉`;
-        } else if (score >= 75) {
-            endingTitle.innerText = "⚠️ 現況結局：【治標不治本，危機潛伏】 🕰️💣";
-            endingTitle.style.color = "#d69e2e"; // 黃/橘色
-            endingText.innerHTML = `📊 最終得分：${score} 分。<br><br>
-            你找出了部分明顯的症狀，讓學生得以在短時間內甦醒並出院。然而，你採取的是「冒著風險維持現況」的策略。<br><br>
-            🍂 學生的核心不良習慣（如熬夜、壓力處理不當、錯誤用藥觀念）並未被徹底糾正。他依然處於「亞健康」狀態，這是一顆未爆彈，未來隨時可能因為壓力或過勞再次倒下。`;
-        } else {
-            endingTitle.innerText = "❌ 壞結局：【錯失良機，系統崩潰】 📉🥀";
-            endingTitle.style.color = "#e53e3e"; // 紅色
-            endingText.innerHTML = `💔 最終得分：${score} 分。<br><br>
-            你的調查方向出現了嚴重盲點，忽視了關鍵的健康風險訊號，甚至做出了會加重病情的錯誤判斷。<br><br>
-            🚑 由於未能及時釐清病因與導正觀念，學生錯失了黃金救援與衛教時機，長期累積的慢性問題引爆，造成了難以逆轉的健康損害。請重新檢視你的健康知識庫，再次挑戰。🔍`;
-        }
+    // 死亡狀態處理
+    function triggerDeath() {
+        isAlive = false;
+        elPet.innerText = "(x _ x)";
+        elMessage.innerText = "系統提示：生命徵象消失。數值已歸零，請重新載入網頁。";
+        buttons.forEach(btn => btn.disabled = true);
     }
+
+    // 顯示隨機知識訊息
+    function displayMessage(type) {
+        const messages = knowledgeBase[type];
+        const randomIndex = Math.floor(Math.random() * messages.length);
+        elMessage.innerText = messages[randomIndex];
+    }
+
+    // 執行互動行為
+    window.action = function(type) {
+        if (!isAlive) return;
+
+        const effect = actionEffects[type];
+        
+        stats.hunger = Math.min(100, Math.max(0, stats.hunger + effect.hunger));
+        stats.health = Math.min(100, Math.max(0, stats.health + effect.health));
+        stats.happiness = Math.min(100, Math.max(0, stats.happiness + effect.happiness));
+        
+        displayMessage(type);
+        updateUI();
+    };
+
+    // 背景時間循環：數值隨時間自然衰減
+    setInterval(() => {
+        if (!isAlive) return;
+
+        stats.hunger = Math.max(0, stats.hunger - 2);
+        stats.health = Math.max(0, stats.health - 1);
+        stats.happiness = Math.max(0, stats.happiness - 2);
+
+        // 有 20% 機率在閒置時跳出健康提示
+        if (Math.random() < 0.2) {
+            displayMessage('idle');
+        }
+
+        updateUI();
+    }, 5000); // 設定為每 5 秒執行一次
+
+    // 初始渲染
+    updateUI();
 </script>
-
 </body>
 </html>
