@@ -225,7 +225,7 @@
 
 <script>
     // 玩家狀態核心參數
-    const maxHP = 3;
+    let maxHP = 3;
     let currentHP = maxHP;
     let hasShield = false;
     let playerLevel = 1;
@@ -271,8 +271,8 @@
         {
             type: 'npc',
             sprite: '👩‍🌾',
-            text: '村民：「謝謝你保護我們！這顆『營養蘋果』請收下，可以恢復你的體力。」',
-            itemLabel: '獲得道具：營養蘋果 (恢復 1 HP)',
+            text: '村民：「謝謝你保護我們！這顆『營養蘋果』請收下，可以提升你的體力上限。」',
+            itemLabel: '獲得道具：營養蘋果 (HP +1)',
             effect: 'heal'
         },
         {
@@ -349,6 +349,7 @@
     });
 
     function initGame() {
+        maxHP = 3;
         currentHP = maxHP;
         hasShield = false;
         playerLevel = 1;
@@ -491,7 +492,10 @@
             hasShield = true;
             resolveEvent();
         } else if (effect === 'heal') {
-            if (currentHP < maxHP) currentHP++;
+            currentHP++;
+            if (currentHP > maxHP) {
+                maxHP = currentHP;
+            }
             resolveEvent();
         } else if (effect === 'class_change') {
             playerClass = '高階防疫騎士';
