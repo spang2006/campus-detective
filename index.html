@@ -247,7 +247,7 @@
 
     const keys = { ArrowLeft: false, ArrowRight: false };
 
-    // 事件資料庫 (加入升級怪物、BOSS與寶箱)
+    // 事件資料庫 (包含升級怪物、BOSS與寶箱)
     const mapEvents = [
         {
             type: 'npc',
@@ -442,7 +442,7 @@
         // 重置 BOSS 血條顯示
         if (currentData.type === 'boss') {
             bossHpBar.style.display = 'block';
-            encounterEl.appendChild(bossHpBar); // 確保血條在怪物身上
+            encounterEl.appendChild(bossHpBar);
         } else {
             bossHpBar.style.display = 'none';
         }
@@ -486,7 +486,6 @@
         }, 300);
     }
 
-    // 處理非戰鬥事件的效果
     function applySpecialEffect(effect) {
         if (effect === 'shield') {
             hasShield = true;
@@ -501,7 +500,7 @@
             playerEl.innerText = playerSprite;
             
             playerInfo.classList.remove('level-up-anim');
-            void playerInfo.offsetWidth; // 觸發重繪
+            void playerInfo.offsetWidth; 
             playerInfo.classList.add('level-up-anim');
             
             resolveEvent();
@@ -511,7 +510,6 @@
         updateStatus();
     }
 
-    // 處理一般怪物戰鬥
     function handleMonsterAnswer(selectedIndex, correctIndex) {
         if (selectedIndex === correctIndex) {
             levelUp();
@@ -521,7 +519,6 @@
         }
     }
 
-    // BOSS 戰問題渲染
     function renderBossQuestion(bossData) {
         const qData = bossData.questions[currentBossQuestionIndex];
         dialogText.innerText = qData.q;
@@ -536,13 +533,11 @@
         });
     }
 
-    // 處理 BOSS 戰鬥邏輯
     function handleBossAnswer(selectedIndex, correctIndex, bossData) {
         if (selectedIndex === correctIndex) {
             currentBossHP--;
             updateBossHPVisual();
             
-            // BOSS 受擊動畫
             encounterEl.style.transform = 'scale(0.8)';
             encounterEl.style.color = 'red';
             setTimeout(() => {
@@ -562,7 +557,6 @@
             takeDamage();
             if (currentHP > 0) {
                 dialogText.innerText = '被 BOSS 猛烈攻擊！扣除 1 HP。請重試這題。';
-                // 重新渲染同一題
                 setTimeout(() => renderBossQuestion(bossData), 1500);
             }
         }
