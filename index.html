@@ -3,38 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>健康電子雞</title>
+<title>健康電子雞 - 孵化版</title>
 <style>
     body {
         display: flex;
         justify-content: center;
         align-items: center;
         height: 100vh;
-        background-color: #e0e0e0;
-        font-family: monospace;
+        background-color: #d1d1d1;
+        font-family: "Courier New", Courier, monospace;
         margin: 0;
     }
     #device {
-        background-color: #d84343;
+        background-color: #ffaa00;
         padding: 25px;
-        border-radius: 40px;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        border-radius: 40px 40px 50px 50px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4), inset 0 5px 15px rgba(255,255,255,0.3);
         width: 320px;
         text-align: center;
     }
     #screen {
-        background-color: #879e86;
-        border: 4px solid #222;
+        background-color: #9bbc0f;
+        border: 5px solid #222;
         border-radius: 10px;
-        height: 220px;
+        height: 240px;
         margin-bottom: 25px;
         position: relative;
         display: flex;
         flex-direction: column;
         padding: 10px;
         box-sizing: border-box;
-        color: #111;
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        color: #0f380f;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        cursor: pointer;
     }
     .stats {
         display: flex;
@@ -42,22 +43,29 @@
         font-size: 14px;
         margin-bottom: 10px;
         font-weight: bold;
+        visibility: hidden; /* 孵化前隱藏 */
     }
-    #pet {
-        font-size: 50px;
+    #pet-container {
         flex-grow: 1;
         display: flex;
         justify-content: center;
         align-items: center;
+        height: 100px;
+    }
+    #pet {
+        font-size: 50px;
+        display: inline-block;
+        user-select: none;
     }
     #message-box {
         font-size: 13px;
         min-height: 45px;
-        background: rgba(255, 255, 255, 0.4);
+        background: rgba(15, 56, 15, 0.1);
         border-radius: 5px;
         padding: 6px;
         text-align: left;
         line-height: 1.4;
+        font-weight: bold;
     }
     .buttons {
         display: flex;
@@ -76,52 +84,79 @@
         cursor: pointer;
         font-size: 14px;
         font-weight: bold;
-        box-shadow: 0 4px 0 #000;
-        transition: transform 0.1s, box-shadow 0.1s;
+        box-shadow: 0 5px 0 #000;
     }
     button:active {
-        transform: translateY(4px);
+        transform: translateY(5px);
         box-shadow: 0 0 0 #000;
     }
     button:disabled {
         background-color: #666;
-        box-shadow: none;
-        transform: none;
+        box-shadow: 0 5px 0 #333;
         cursor: not-allowed;
     }
+
+    /* 動畫定義 */
+    @keyframes shake {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(-8px) rotate(-10deg); }
+        75% { transform: translateX(8px) rotate(10deg); }
+        100% { transform: translateX(0); }
+    }
+    @keyframes hop {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+    }
+    @keyframes exercise-hop {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-25px) scale(1.1); }
+    }
+
+    .anim-shake { animation: shake 0.3s ease-in-out; }
+    .anim-hop { animation: hop 1.2s infinite; }
+    .anim-exercise { animation: exercise-hop 0.4s infinite; }
+    .anim-sleep { animation: none; transform: translateY(10px); }
+
 </style>
 </head>
 <body>
 
 <div id="device">
-    <div id="screen">
-        <div class="stats">
-            <span>飽食: <span id="val-hunger">50</span></span>
-            <span>健康: <span id="val-health">80</span></span>
-            <span>心情: <span id="val-happiness">80</span></span>
+    <div id="screen" onclick="interactScreen()">
+        <div class="stats" id="stats-bar">
+            <span>飽食:<span id="val-hunger">50</span></span>
+            <span>健康:<span id="val-health">80</span></span>
+            <span>心情:<span id="val-happiness">80</span></span>
         </div>
-        <div id="pet">( • ω • )</div>
-        <div id="message-box">系統初始化完成，請開始操作。</div>
+        <div id="pet-container">
+            <div id="pet">🥚</div>
+        </div>
+        <div id="message-box">系統：請點擊螢幕來孵化電子雞。</div>
     </div>
     <div class="buttons">
-        <button id="btn-feed" onclick="action('feed')">飲食</button>
-        <button id="btn-water" onclick="action('water')">喝水</button>
-        <button id="btn-exercise" onclick="action('exercise')">運動</button>
-        <button id="btn-sleep" onclick="action('sleep')">睡眠</button>
+        <button id="btn-feed" onclick="action('feed', event)" disabled>飲食</button>
+        <button id="btn-water" onclick="action('water', event)" disabled>喝水</button>
+        <button id="btn-exercise" onclick="action('exercise', event)" disabled>運動</button>
+        <button id="btn-sleep" onclick="action('sleep', event)" disabled>睡眠</button>
     </div>
 </div>
 
 <script>
-    // 狀態變數初始化
+    // 系統狀態
+    let appState = 'egg'; // egg, active, sleeping, dead
+    let hatchProgress = 0;
+    const CLICKS_TO_HATCH = 5;
+    let gameLoop;
+
+    // 數值初始化
     let stats = {
         hunger: 50,
         health: 80,
         happiness: 80
     };
 
-    let isAlive = true;
-
-    // DOM 元素參考
+    // DOM 元素
+    const elStatsBar = document.getElementById('stats-bar');
     const elHunger = document.getElementById('val-hunger');
     const elHealth = document.getElementById('val-health');
     const elHappiness = document.getElementById('val-happiness');
@@ -129,31 +164,40 @@
     const elMessage = document.getElementById('message-box');
     const buttons = document.querySelectorAll('button');
 
-    // 健康知識資料庫
+    // 角色表情包
+    const faces = {
+        normal: "( • ▴ • )",
+        happy: "\\ ( ^ ▴ ^ ) /",
+        sad: "( ; ▴ ; )",
+        sleep: "( - ▴ - ) zZ",
+        dead: "( x ▴ x )"
+    };
+
+    // 健康知識庫
     const knowledgeBase = {
         feed: [
-            "健康知識：國民飲食指南建議，均衡攝取全穀雜糧、豆魚蛋肉、蔬菜、水果、乳品及堅果種子六大類食物。",
-            "健康知識：每餐蔬菜攝取量應大於或等於水果量，以維持穩定的血糖波動。"
+            "健康知識：國民飲食指南建議，均衡攝取六大類食物。",
+            "健康知識：每餐蔬菜攝取量應大於或等於水果量，以維持血糖穩定。"
         ],
         water: [
             "健康知識：一般成人每日建議飲水量約為體重(公斤)乘以 30 毫升。",
-            "健康知識：口渴是身體缺水的落後指標，應養成定時定量補充水分的習慣。"
+            "健康知識：口渴是身體缺水的落後指標，應定時補充水分。"
         ],
         exercise: [
-            "健康知識：世界衛生組織建議，18至64歲成人每週應至少進行 150 分鐘中等強度有氧運動。",
-            "健康知識：規律運動有助於釋放腦內啡，降低罹患心血管疾病的風險並提升睡眠品質。"
+            "健康知識：18至64歲成人每週應至少進行 150 分鐘中等強度有氧運動。",
+            "健康知識：規律運動有助於釋放腦內啡，降低心血管疾病風險。"
         ],
         sleep: [
-            "健康知識：多數成年人每日建議睡眠時間為 7 至 9 小時。",
-            "健康知識：深度睡眠期為人體組織修復、免疫系統運作與記憶力鞏固的關鍵階段。"
+            "健康知識：成年人每日建議睡眠時間為 7 至 9 小時。",
+            "健康知識：深度睡眠期為組織修復與免疫系統運作的關鍵。"
         ],
         idle: [
             "健康提示：久坐超過一小時應起身活動，降低代謝症候群風險。",
-            "健康提示：長期處於壓力狀態將導致皮質醇分泌異常，影響免疫力。"
+            "健康提示：長期處於壓力狀態將導致皮質醇分泌異常。"
         ]
     };
 
-    // 互動行為對數值的影響權重
+    // 行為參數權重
     const actionEffects = {
         feed: { hunger: 30, health: 5, happiness: 5 },
         water: { hunger: 5, health: 15, happiness: 5 },
@@ -161,41 +205,46 @@
         sleep: { hunger: -10, health: 25, happiness: 10 }
     };
 
-    // 更新畫面渲染
-    function updateUI() {
-        elHunger.innerText = stats.hunger;
-        elHealth.innerText = stats.health;
-        elHappiness.innerText = stats.happiness;
+    // 觸發重新套用動畫的工具函數
+    function playAnimation(animClass) {
+        elPet.className = ''; 
+        void elPet.offsetWidth; // 觸發重繪 (Reflow)
+        elPet.classList.add(animClass);
+    }
 
-        if (!isAlive) return;
+    // 螢幕點擊事件（處理孵化）
+    window.interactScreen = function() {
+        if (appState !== 'egg') return;
 
-        if (stats.health <= 0 || stats.hunger <= 0) {
-            triggerDeath();
-        } else if (stats.health < 30 || stats.hunger < 30) {
-            elPet.innerText = "(;´Д`)";
+        hatchProgress++;
+        playAnimation('anim-shake');
+
+        if (hatchProgress >= CLICKS_TO_HATCH) {
+            hatch();
         } else {
-            elPet.innerText = "( • ω • )";
+            elMessage.innerText = `蛋殼出現裂縫... (${hatchProgress}/${CLICKS_TO_HATCH})`;
         }
+    };
+
+    // 孵化邏輯
+    function hatch() {
+        appState = 'active';
+        elPet.innerText = faces.normal;
+        elPet.className = 'anim-hop'; // 開始預設跳躍動畫
+        elStatsBar.style.visibility = 'visible';
+        buttons.forEach(btn => btn.disabled = false);
+        elMessage.innerText = "系統提示：小雞已孵化，請開始照顧與管理數值。";
+        
+        updateUI();
+        
+        // 啟動背景扣除邏輯
+        gameLoop = setInterval(timeTick, 5000);
     }
 
-    // 死亡狀態處理
-    function triggerDeath() {
-        isAlive = false;
-        elPet.innerText = "(x _ x)";
-        elMessage.innerText = "系統提示：生命徵象消失。數值已歸零，請重新載入網頁。";
-        buttons.forEach(btn => btn.disabled = true);
-    }
-
-    // 顯示隨機知識訊息
-    function displayMessage(type) {
-        const messages = knowledgeBase[type];
-        const randomIndex = Math.floor(Math.random() * messages.length);
-        elMessage.innerText = messages[randomIndex];
-    }
-
-    // 執行互動行為
-    window.action = function(type) {
-        if (!isAlive) return;
+    // 執行互動按鈕
+    window.action = function(type, event) {
+        event.stopPropagation(); // 避免點擊按鈕時觸發螢幕的 onClick
+        if (appState === 'dead' || appState === 'sleeping') return;
 
         const effect = actionEffects[type];
         
@@ -203,28 +252,93 @@
         stats.health = Math.min(100, Math.max(0, stats.health + effect.health));
         stats.happiness = Math.min(100, Math.max(0, stats.happiness + effect.happiness));
         
-        displayMessage(type);
-        updateUI();
+        // 輸出對應知識
+        const messages = knowledgeBase[type];
+        elMessage.innerText = messages[Math.floor(Math.random() * messages.length)];
+
+        // 處理特殊狀態動畫與表情
+        if (type === 'sleep') {
+            appState = 'sleeping';
+            elPet.innerText = faces.sleep;
+            elPet.className = 'anim-sleep';
+            buttons.forEach(btn => btn.disabled = true);
+            
+            // 模擬睡眠過程，3秒後醒來
+            setTimeout(() => {
+                if (appState === 'dead') return;
+                appState = 'active';
+                buttons.forEach(btn => btn.disabled = false);
+                updateUI(); // 醒來後根據數值恢復表情
+            }, 3000);
+        } else if (type === 'exercise') {
+            elPet.innerText = faces.happy;
+            playAnimation('anim-exercise');
+            setTimeout(() => { if (appState === 'active') updateUI(); }, 1500);
+        } else {
+            elPet.innerText = faces.happy;
+            playAnimation('anim-hop');
+            setTimeout(() => { if (appState === 'active') updateUI(); }, 1000);
+        }
+
+        updateStatsDisplay();
+        checkVitalSigns();
     };
 
-    // 背景時間循環：數值隨時間自然衰減
-    setInterval(() => {
-        if (!isAlive) return;
+    // 時間衰減邏輯
+    function timeTick() {
+        if (appState === 'dead') {
+            clearInterval(gameLoop);
+            return;
+        }
 
         stats.hunger = Math.max(0, stats.hunger - 2);
         stats.health = Math.max(0, stats.health - 1);
         stats.happiness = Math.max(0, stats.happiness - 2);
 
-        // 有 20% 機率在閒置時跳出健康提示
-        if (Math.random() < 0.2) {
-            displayMessage('idle');
+        if (Math.random() < 0.2 && appState === 'active') {
+            const msgs = knowledgeBase['idle'];
+            elMessage.innerText = msgs[Math.floor(Math.random() * msgs.length)];
         }
 
-        updateUI();
-    }, 5000); // 設定為每 5 秒執行一次
+        updateStatsDisplay();
+        checkVitalSigns();
+        if (appState === 'active') updateUI();
+    }
 
-    // 初始渲染
-    updateUI();
+    // 更新數值顯示
+    function updateStatsDisplay() {
+        elHunger.innerText = stats.hunger;
+        elHealth.innerText = stats.health;
+        elHappiness.innerText = stats.happiness;
+    }
+
+    // 依據數值更新預設表情
+    function updateUI() {
+        if (appState !== 'active') return;
+
+        if (stats.health < 30 || stats.hunger < 30 || stats.happiness < 30) {
+            elPet.innerText = faces.sad;
+            elPet.className = 'anim-shake'; // 虛弱時發抖
+        } else {
+            elPet.innerText = faces.normal;
+            if (!elPet.classList.contains('anim-hop')) {
+                elPet.className = 'anim-hop';
+            }
+        }
+    }
+
+    // 檢查死亡條件
+    function checkVitalSigns() {
+        if (stats.health <= 0 || stats.hunger <= 0) {
+            appState = 'dead';
+            elPet.innerText = faces.dead;
+            elPet.className = ''; 
+            elMessage.innerText = "系統警告：生命徵象消失，數值已歸零。請重新整理頁面。";
+            buttons.forEach(btn => btn.disabled = true);
+            clearInterval(gameLoop);
+        }
+    }
+
 </script>
 </body>
 </html>
