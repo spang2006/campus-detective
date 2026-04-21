@@ -3,147 +3,206 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>健康大富翁 - 模擬AI對戰</title>
+<title>健康大富翁 - 決策互動版</title>
 <style>
     body {
-        font-family: "Courier New", Courier, monospace;
-        background-color: #f4f4f9;
+        font-family: monospace;
+        background-color: #2c3e50;
         display: flex;
         justify-content: center;
-        padding: 20px;
+        align-items: center;
+        height: 100vh;
         margin: 0;
-        color: #333;
+        color: #ecf0f1;
     }
     #game-container {
-        width: 800px;
         display: flex;
         gap: 20px;
-    }
-    #board {
-        display: flex;
-        flex-wrap: wrap;
-        width: 500px;
-        gap: 5px;
-    }
-    .space {
-        width: 110px;
-        height: 110px;
-        background-color: #fff;
-        border: 2px solid #ccc;
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        padding: 5px;
-        box-sizing: border-box;
-        font-size: 13px;
-        font-weight: bold;
-        text-align: center;
+        background: #34495e;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         position: relative;
     }
-    .space-name { font-size: 14px; margin-bottom: 2px; }
-    .space-price { color: #d32f2f; }
-    .space-owner { color: #1976d2; font-size: 11px; }
-    .players-here {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 2px;
-        justify-content: center;
-        margin-top: 5px;
+    #board {
+        display: grid;
+        grid-template-columns: repeat(4, 120px);
+        grid-template-rows: repeat(4, 120px);
+        gap: 5px;
     }
-    .token {
-        width: 15px;
-        height: 15px;
-        border-radius: 50%;
-        color: white;
-        font-size: 10px;
-        line-height: 15px;
-        text-align: center;
-    }
-    #panel {
-        width: 280px;
-        background-color: #fff;
-        border: 2px solid #ccc;
-        border-radius: 8px;
-        padding: 15px;
+    /* 排列成環狀的 CSS Grid 技巧 */
+    .space[data-id="0"] { grid-area: 1 / 1; }
+    .space[data-id="1"] { grid-area: 1 / 2; }
+    .space[data-id="2"] { grid-area: 1 / 3; }
+    .space[data-id="3"] { grid-area: 1 / 4; }
+    .space[data-id="4"] { grid-area: 2 / 4; }
+    .space[data-id="5"] { grid-area: 3 / 4; }
+    .space[data-id="6"] { grid-area: 4 / 4; }
+    .space[data-id="7"] { grid-area: 4 / 3; }
+    .space[data-id="8"] { grid-area: 4 / 2; }
+    .space[data-id="9"] { grid-area: 4 / 1; }
+    .space[data-id="10"] { grid-area: 3 / 1; }
+    .space[data-id="11"] { grid-area: 2 / 1; }
+
+    /* 中央空地區域放置骰子與提示 */
+    #center-area {
+        grid-area: 2 / 2 / 4 / 4;
         display: flex;
         flex-direction: column;
-        box-sizing: border-box;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(0,0,0,0.2);
+        border-radius: 10px;
     }
-    .player-stats {
-        margin-bottom: 10px;
-        padding: 8px;
-        border: 1px solid #eee;
-        border-radius: 5px;
-        background-color: #fafafa;
+
+    .space {
+        background-color: #ecf0f1;
+        color: #2c3e50;
+        border: 2px solid #95a5a6;
+        border-radius: 8px;
+        padding: 5px;
+        display: flex;
+        flex-direction: column;
+        font-size: 13px;
+        position: relative;
+        transition: transform 0.1s, background-color 0.2s;
     }
-    .active-player {
-        border-color: #4caf50;
-        background-color: #e8f5e9;
+    .space.active-step {
+        background-color: #f1c40f;
+        transform: scale(1.05);
+        z-index: 10;
     }
+    .space-title { font-weight: bold; margin-bottom: 5px; text-align: center; }
+    .space-details { font-size: 11px; text-align: center; color: #c0392b; }
+    
+    .players-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+        margin-top: auto;
+        justify-content: center;
+    }
+    .token {
+        width: 20px; height: 20px;
+        border-radius: 50%; color: white;
+        font-size: 12px; line-height: 20px;
+        text-align: center; font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+
+    #panel {
+        width: 300px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .player-card {
+        background: #2c3e50; padding: 10px; border-radius: 8px;
+        border-left: 5px solid transparent;
+        transition: 0.3s;
+    }
+    .player-card.active { border-left-color: #2ecc71; background: #3b536b; }
+    .stats-bar { display: flex; justify-content: space-between; font-size: 12px; margin-top: 5px;}
+    
     #log {
-        flex-grow: 1;
-        background-color: #222;
-        color: #0f0;
-        padding: 10px;
-        font-size: 12px;
-        overflow-y: auto;
-        border-radius: 5px;
-        height: 200px;
-        margin-top: 15px;
-        margin-bottom: 15px;
+        flex-grow: 1; background: #1a252f; padding: 10px;
+        font-size: 12px; overflow-y: auto; border-radius: 8px;
+        height: 150px; font-family: monospace; color: #1abc9c;
     }
-    button {
-        padding: 12px;
-        font-size: 16px;
-        font-weight: bold;
-        background-color: #1976d2;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
+
+    /* 互動視窗 (Modal) */
+    #modal-overlay {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); display: none;
+        justify-content: center; align-items: center; z-index: 100;
+        border-radius: 10px;
     }
-    button:disabled {
-        background-color: #999;
-        cursor: not-allowed;
+    #modal-box {
+        background: #ecf0f1; color: #2c3e50; padding: 20px;
+        border-radius: 8px; width: 300px; text-align: center;
     }
+    .btn {
+        background: #2980b9; color: white; border: none;
+        padding: 10px 15px; margin: 5px; border-radius: 5px;
+        cursor: pointer; font-weight: bold; font-family: monospace;
+    }
+    .btn:hover { background: #3498db; }
+    .btn:disabled { background: #7f8c8d; cursor: not-allowed; }
+
+    #dice-display {
+        font-size: 40px; font-weight: bold; background: white;
+        color: #2c3e50; width: 60px; height: 60px;
+        line-height: 60px; text-align: center; border-radius: 10px;
+        margin-bottom: 10px;
+    }
+    .anim-spin { animation: spin 0.1s infinite linear; }
+    @keyframes spin { 100% { transform: rotate(15deg) scale(1.1); } }
 </style>
 </head>
 <body>
 
 <div id="game-container">
-    <div id="board"></div>
+    <div id="board">
+        <div id="center-area">
+            <div id="dice-display">-</div>
+            <button id="btn-roll" class="btn" disabled>等待回合</button>
+        </div>
+    </div>
 
     <div id="panel">
         <div id="player-list"></div>
-        <div id="log">系統：遊戲初始化完成。</div>
-        <button id="btn-roll" onclick="humanRoll()" disabled>輪到你擲骰子</button>
+        <div id="log">系統分析：遊戲引擎初始化完成。<br></div>
+    </div>
+
+    <div id="modal-overlay">
+        <div id="modal-box">
+            <h3 id="modal-title">決策事件</h3>
+            <p id="modal-text">請選擇應對方案</p>
+            <div id="modal-buttons"></div>
+        </div>
     </div>
 </div>
 
 <script>
-    // 1. 地圖資料定義
+    // --- 系統資料定義 ---
     const mapData = [
-        { id: 0, name: "起點", type: "start", info: "經過領 $200" },
-        { id: 1, name: "健身中心", type: "property", price: 100, rent: 20, owner: null },
-        { id: 2, name: "健康抽籤", type: "chance", info: "隨機事件" },
+        { id: 0, name: "起點", type: "start", info: "經過領 $200, 體力+50" },
+        { id: 1, name: "健身房", type: "property", price: 100, rent: 20, owner: null },
+        { id: 2, name: "健康抉擇", type: "decision", info: "面臨選擇" },
         { id: 3, name: "有機超市", type: "property", price: 150, rent: 30, owner: null },
-        { id: 4, name: "急診室", type: "tax", info: "付費 $50", cost: 50 },
+        { id: 4, name: "過度勞累", type: "tax", cost: 50, energyCost: 30, info: "扣 $50, 體力-30" },
         { id: 5, name: "睡眠中心", type: "property", price: 200, rent: 40, owner: null },
-        { id: 6, name: "健康抽籤", type: "chance", info: "隨機事件" },
+        { id: 6, name: "健康抉擇", type: "decision", info: "面臨選擇" },
         { id: 7, name: "連鎖藥局", type: "property", price: 100, rent: 20, owner: null },
-        { id: 8, name: "復健科", type: "jail", info: "暫停一回合" },
+        { id: 8, name: "急診室", type: "jail", info: "強制休息一回合" },
         { id: 9, name: "諮商所", type: "property", price: 150, rent: 30, owner: null },
-        { id: 10, name: "健康抽籤", type: "chance", info: "隨機事件" },
-        { id: 11, name: "體育館", type: "property", price: 200, rent: 40, owner: null }
+        { id: 10, name: "健康抉擇", type: "decision", info: "面臨選擇" },
+        { id: 11, name: "休閒農場", type: "property", price: 200, rent: 40, owner: null }
     ];
 
-    // 2. 玩家資料定義
     const players = [
-        { id: 0, name: "真人玩家", isBot: false, money: 1000, pos: 0, color: "#e53935", sleep: 0 },
-        { id: 1, name: "電腦 A", isBot: true, money: 1000, pos: 0, color: "#1e88e5", sleep: 0 },
-        { id: 2, name: "電腦 B", isBot: true, money: 1000, pos: 0, color: "#43a047", sleep: 0 },
-        { id: 3, name: "電腦 C", isBot: true, money: 1000, pos: 0, color: "#fb8c00", sleep: 0 }
+        { id: 0, name: "玩家", isBot: false, money: 800, energy: 100, pos: 0, color: "#e74c3c", status: "normal" },
+        { id: 1, name: "電腦 A", isBot: true, money: 800, energy: 100, pos: 0, color: "#3498db", status: "normal" },
+        { id: 2, name: "電腦 B", isBot: true, money: 800, energy: 100, pos: 0, color: "#9b59b6", status: "normal" }
+    ];
+
+    // 決策事件庫 (提供二選一)
+    const decisionEvents = [
+        {
+            text: "下班後感到疲勞，是否要花錢搭計程車回家？",
+            optA: { label: "搭計程車 (花費 $30, 體力+10)", money: -30, energy: 10 },
+            optB: { label: "走路回家 (體力-20)", money: 0, energy: -20 }
+        },
+        {
+            text: "同事邀請吃高熱量宵夜，是否拒絕？",
+            optA: { label: "拒絕聚餐 (體力+20, 扣除交際費 $10)", money: -10, energy: 20 },
+            optB: { label: "參加聚餐 (體力-30)", money: 0, energy: -30 }
+        },
+        {
+            text: "發現自費的全身健康檢查方案。",
+            optA: { label: "花費 $100 檢查 (體力補滿)", money: -100, energy: "max" },
+            optB: { label: "忽略 (無事發生)", money: 0, energy: 0 }
+        }
     ];
 
     let turnIndex = 0;
@@ -151,186 +210,261 @@
     const elPlayerList = document.getElementById('player-list');
     const elLog = document.getElementById('log');
     const btnRoll = document.getElementById('btn-roll');
+    const elDice = document.getElementById('dice-display');
+    const elModal = document.getElementById('modal-overlay');
 
-    // 系統日誌輸出
+    // 系統延遲 Promise
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
     function log(msg) {
-        elLog.innerHTML += `<div>${msg}</div>`;
+        elLog.innerHTML += `> ${msg}<br>`;
         elLog.scrollTop = elLog.scrollHeight;
     }
 
-    // 繪製地圖與玩家位置
-    function renderBoard() {
-        elBoard.innerHTML = '';
-        mapData.forEach((space, index) => {
+    // --- 畫面渲染邏輯 ---
+    function initBoard() {
+        mapData.forEach((space) => {
             const div = document.createElement('div');
             div.className = 'space';
-            let html = `<div class="space-name">${space.name}</div>`;
-            
-            if (space.type === 'property') {
-                html += `<div class="space-price">$${space.price}</div>`;
-                if (space.owner !== null) {
-                    html += `<div class="space-owner">擁有者: ${players[space.owner].name}</div>`;
-                } else {
-                    html += `<div class="space-owner">無人擁有</div>`;
-                }
-            } else {
-                html += `<div class="space-owner">${space.info}</div>`;
-            }
-
-            // 標示該格位上的玩家
-            let playersHtml = '<div class="players-here">';
-            players.forEach(p => {
-                if (p.pos === index) {
-                    playersHtml += `<div class="token" style="background-color:${p.color}">${p.id+1}</div>`;
-                }
-            });
-            playersHtml += '</div>';
-
-            div.innerHTML = html + playersHtml;
+            div.dataset.id = space.id;
+            div.innerHTML = `
+                <div class="space-title">${space.name}</div>
+                <div class="space-details">${space.type === 'property' ? '$'+space.price : space.info}</div>
+                <div class="players-container" id="cell-players-${space.id}"></div>
+            `;
             elBoard.appendChild(div);
         });
+        updateTokens();
     }
 
-    // 更新右側玩家數值
+    function updateTokens() {
+        mapData.forEach(s => document.getElementById(`cell-players-${s.id}`).innerHTML = '');
+        players.forEach(p => {
+            const container = document.getElementById(`cell-players-${p.pos}`);
+            const token = document.createElement('div');
+            token.className = 'token';
+            token.style.backgroundColor = p.color;
+            token.innerText = p.id === 0 ? "我" : "C";
+            container.appendChild(token);
+        });
+        renderPlayers();
+    }
+
     function renderPlayers() {
         elPlayerList.innerHTML = '';
-        players.forEach((p, index) => {
+        players.forEach((p, idx) => {
             const div = document.createElement('div');
-            div.className = `player-stats ${index === turnIndex ? 'active-player' : ''}`;
+            div.className = `player-card ${idx === turnIndex ? 'active' : ''}`;
             div.innerHTML = `
-                <strong><span style="color:${p.color}">■</span> ${p.name}</strong> 
-                <br>資金: $${p.money} 
-                ${p.sleep > 0 ? '(復健中)' : ''}
+                <span style="color:${p.color}">■</span> <b>${p.name}</b> 
+                [${p.status === 'hospital' ? '住院中' : '正常'}]
+                <div class="stats-bar">
+                    <span>資金: $${p.money}</span>
+                    <span style="color:${p.energy < 30 ? '#e74c3c' : '#2ecc71'}">體力: ${p.energy}/100</span>
+                </div>
             `;
             elPlayerList.appendChild(div);
         });
     }
 
-    // 隨機事件庫
-    const chances = [
-        { msg: "維持規律運動，獲得健保紅利 $50！", val: 50 },
-        { msg: "熬夜免疫力下降，支付掛號費 $30。", val: -30 },
-        { msg: "購買無農藥蔬菜，花費 $40。", val: -40 },
-        { msg: "參加健康講座，獲得車馬費 $20。", val: 20 }
-    ];
-
-    // 回合管理中樞
-    function processTurn() {
-        renderPlayers();
-        renderBoard();
-        const p = players[turnIndex];
-
-        if (p.sleep > 0) {
-            log(`[${p.name}] 正在復健科休息，暫停一回合。`);
-            p.sleep--;
-            endTurn();
-            return;
-        }
-
-        if (p.isBot) {
-            btnRoll.disabled = true;
-            btnRoll.innerText = "電腦行動中...";
-            // 模擬 AI 思考延遲
-            setTimeout(() => {
-                executeMove(p);
-            }, 1000);
-        } else {
+    // --- 互動等待邏輯 ---
+    // 將按鈕點擊封裝為 Promise，中斷單線程的連續執行
+    function waitForHumanRoll() {
+        return new Promise(resolve => {
             btnRoll.disabled = false;
-            btnRoll.innerText = "輪到你擲骰子";
+            btnRoll.innerText = "點擊擲骰";
+            btnRoll.onclick = () => {
+                btnRoll.disabled = true;
+                resolve();
+            };
+        });
+    }
+
+    function waitForDecision(eventObj) {
+        return new Promise(resolve => {
+            document.getElementById('modal-title').innerText = "遭遇抉擇";
+            document.getElementById('modal-text').innerText = eventObj.text;
+            const btnBox = document.getElementById('modal-buttons');
+            btnBox.innerHTML = '';
+
+            [eventObj.optA, eventObj.optB].forEach((opt, index) => {
+                const b = document.createElement('button');
+                b.className = 'btn';
+                b.innerText = opt.label;
+                b.onclick = () => {
+                    elModal.style.display = 'none';
+                    resolve(opt);
+                };
+                btnBox.appendChild(b);
+            });
+            elModal.style.display = 'flex';
+        });
+    }
+
+    function waitForBuyDecision(space) {
+        return new Promise(resolve => {
+            document.getElementById('modal-title').innerText = "購買資產";
+            document.getElementById('modal-text').innerText = `是否花費 $${space.price} 投資 ${space.name}？\n預期租金收益：$${space.rent}`;
+            const btnBox = document.getElementById('modal-buttons');
+            btnBox.innerHTML = `
+                <button class="btn" id="btn-buy-yes">購買</button>
+                <button class="btn" id="btn-buy-no">放棄</button>
+            `;
+            elModal.style.display = 'flex';
+            
+            document.getElementById('btn-buy-yes').onclick = () => { elModal.style.display = 'none'; resolve(true); };
+            document.getElementById('btn-buy-no').onclick = () => { elModal.style.display = 'none'; resolve(false); };
+        });
+    }
+
+    // --- 動畫與核心運算邏輯 ---
+    async function animateDice() {
+        elDice.classList.add('anim-spin');
+        for (let i = 0; i < 10; i++) {
+            elDice.innerText = Math.floor(Math.random() * 6) + 1;
+            await sleep(50);
+        }
+        elDice.classList.remove('anim-spin');
+        const finalResult = Math.floor(Math.random() * 6) + 1;
+        elDice.innerText = finalResult;
+        return finalResult;
+    }
+
+    async function moveSteps(player, steps) {
+        for (let i = 0; i < steps; i++) {
+            player.pos = (player.pos + 1) % mapData.length;
+            // 經過起點
+            if (player.pos === 0) {
+                player.money += 200;
+                player.energy = Math.min(100, player.energy + 50);
+                log(`[${player.name}] 經過起點，獲取津貼。`);
+            }
+            
+            player.energy -= 2; // 移動消耗體力
+            
+            // 視覺高亮當前格子
+            const currentCell = document.querySelector(`.space[data-id="${player.pos}"]`);
+            currentCell.classList.add('active-step');
+            updateTokens();
+            
+            await sleep(300);
+            currentCell.classList.remove('active-step');
+            
+            if (player.energy <= 0) break; // 體力不支中斷移動
         }
     }
 
-    // 真人玩家點擊擲骰
-    window.humanRoll = function() {
-        btnRoll.disabled = true;
-        executeMove(players[turnIndex]);
-    };
-
-    // 執行移動與判定
-    function executeMove(player) {
-        const dice = Math.floor(Math.random() * 6) + 1;
-        log(`[${player.name}] 擲出了 ${dice} 點。`);
-        
-        let oldPos = player.pos;
-        player.pos += dice;
-        
-        // 經過起點處理
-        if (player.pos >= mapData.length) {
-            player.pos = player.pos % mapData.length;
-            player.money += 200;
-            log(`[${player.name}] 經過起點，領取 $200 健康津貼。`);
+    function checkVitality(player) {
+        if (player.energy <= 0) {
+            log(`警告：[${player.name}] 體力透支！強制送往急診室。`);
+            player.pos = 8; // 送往急診室
+            player.money -= 100; // 醫療費
+            player.status = 'hospital';
+            player.energy = 50; // 恢復基礎體力
+            updateTokens();
+            return false;
         }
+        return true;
+    }
 
-        renderBoard();
-        const space = mapData[player.pos];
-        log(`[${player.name}] 走到了「${space.name}」。`);
+    // --- 遊戲主迴圈 (Async Engine) ---
+    async function gameLoop() {
+        while (true) {
+            const p = players[turnIndex];
+            renderPlayers();
 
-        // 判定踩到的格子類型
-        if (space.type === 'property') {
-            if (space.owner === null) {
-                // 空地：AI 預設只要錢夠就買，真人則跳出提示框
-                if (player.isBot) {
-                    if (player.money >= space.price) {
-                        buyProperty(player, space);
-                    } else {
-                        log(`[${player.name}] 資金不足，放棄購買。`);
-                    }
+            if (p.status === 'hospital') {
+                log(`[${p.name}] 正在醫院休養，暫停行動。`);
+                p.status = 'normal';
+                await sleep(1000);
+            } else {
+                if (p.isBot) {
+                    btnRoll.innerText = "AI 運算中...";
+                    await sleep(800);
                 } else {
-                    if (player.money >= space.price) {
-                        const confirmBuy = confirm(`「${space.name}」目前無人擁有。\n價格：$${space.price}\n租金收益：$${space.rent}\n請問是否購買？`);
-                        if (confirmBuy) buyProperty(player, space);
-                    } else {
-                        alert("資金不足以購買此設施。");
+                    await waitForHumanRoll();
+                }
+
+                const dice = await animateDice();
+                log(`[${p.name}] 擲出 ${dice} 點。`);
+                
+                await moveSteps(p, dice);
+                
+                // 確認體力狀態，若透支則中斷後續格子判定
+                if (checkVitality(p)) {
+                    const space = mapData[p.pos];
+                    log(`[${p.name}] 抵達：${space.name}`);
+                    await sleep(500);
+
+                    // 處理格子邏輯
+                    if (space.type === 'property') {
+                        if (space.owner === null) {
+                            if (p.isBot) {
+                                // AI 邏輯：資金大於價格+100 且體力尚可時購買
+                                if (p.money >= space.price + 100) {
+                                    p.money -= space.price;
+                                    space.owner = p.id;
+                                    document.querySelector(`.space[data-id="${space.id}"] .space-details`).innerText = `擁有者: ${p.name}`;
+                                    log(`[${p.name}] 投資了此設施。`);
+                                }
+                            } else {
+                                if (p.money >= space.price) {
+                                    const doBuy = await waitForBuyDecision(space);
+                                    if (doBuy) {
+                                        p.money -= space.price;
+                                        space.owner = p.id;
+                                        document.querySelector(`.space[data-id="${space.id}"] .space-details`).innerText = `擁有者: ${p.name}`;
+                                        log(`[${p.name}] 成功投資。`);
+                                    }
+                                } else {
+                                    log("資金不足，無法觸發購買選項。");
+                                }
+                            }
+                        } else if (space.owner !== p.id) {
+                            p.money -= space.rent;
+                            players[space.owner].money += space.rent;
+                            log(`[${p.name}] 支付使用費 $${space.rent}。`);
+                        }
+                    } 
+                    else if (space.type === 'decision') {
+                        const evt = decisionEvents[Math.floor(Math.random() * decisionEvents.length)];
+                        let choice;
+                        if (p.isBot) {
+                            // AI 隨機選擇
+                            choice = Math.random() > 0.5 ? evt.optA : evt.optB;
+                            log(`[${p.name}] 面臨抉擇，選擇了：${choice.label.split('(')[0]}`);
+                        } else {
+                            choice = await waitForDecision(evt);
+                            log(`[${p.name}] 決定：${choice.label}`);
+                        }
+                        
+                        p.money += choice.money;
+                        if (choice.energy === "max") p.energy = 100;
+                        else p.energy = Math.min(100, p.energy + choice.energy);
+                    }
+                    else if (space.type === 'tax') {
+                        p.money -= space.cost;
+                        p.energy -= space.energyCost;
+                    }
+                    else if (space.type === 'jail') {
+                        p.status = 'hospital';
+                        log(`[${p.name}] 進入急診室，下回合暫停。`);
                     }
                 }
-            } else if (space.owner !== player.id) {
-                // 別人的地：付過路費
-                const rent = space.rent;
-                player.money -= rent;
-                players[space.owner].money += rent;
-                log(`[${player.name}] 支付了 $${rent} 使用費給 ${players[space.owner].name}。`);
             }
-        } 
-        else if (space.type === 'chance') {
-            const chance = chances[Math.floor(Math.random() * chances.length)];
-            player.money += chance.val;
-            log(`[${player.name}] 隨機事件：${chance.msg}`);
-        }
-        else if (space.type === 'tax') {
-            player.money -= space.cost;
-            log(`[${player.name}] 支付了醫療費用 $${space.cost}。`);
-        }
-        else if (space.type === 'jail') {
-            player.sleep = 1;
-            log(`[${player.name}] 進入復健科，下次將暫停一回合。`);
-        }
 
-        // 延遲結束回合，讓視覺有停留時間
-        setTimeout(() => {
-            endTurn();
-        }, 800);
+            checkVitality(p); // 結算後再次檢查
+            renderPlayers();
+            
+            // 換人邏輯
+            turnIndex = (turnIndex + 1) % players.length;
+            await sleep(500);
+        }
     }
 
-    // 購買設施邏輯
-    function buyProperty(player, space) {
-        player.money -= space.price;
-        space.owner = player.id;
-        log(`[${player.name}] 投資了「${space.name}」。`);
-    }
-
-    // 結束回合並換人
-    function endTurn() {
-        // 簡單破產判定 (直接扣至負數，未做遊戲結束機制)
-        if (players[turnIndex].money < 0) {
-            log(`⚠️ [${players[turnIndex].name}] 資金為負，面臨破產風險！`);
-        }
-
-        turnIndex = (turnIndex + 1) % players.length;
-        processTurn();
-    }
-
-    // 啟動遊戲
-    processTurn();
+    // 啟動系統
+    initBoard();
+    gameLoop();
 
 </script>
 </body>
